@@ -12,7 +12,7 @@
 <!calibrar_ph>
 <form id="calibrar_ph" method="POST" action='#'>
 <div class="caja1">
-    <h4>Calibración T. Sombrero</h4>
+    <h4>Calibración pH</h4>
 
     <div id="med1_c">med1_c</div><br>
     <select id="medx_ph">
@@ -23,9 +23,9 @@
           <input type="number"
                  id="ph"
                  style="width: 50px;"
-                 value="50"
-                 MIN="0"
-                 MAX="100"
+                 value="4"
+                 MIN="1"
+                 MAX="7"
                  step="1"
           />
           <button  type="submit" class="button_apply"> + </button>
@@ -44,7 +44,7 @@
 <!calibrar_temp>
 <form id="calibrar_temp" method="POST" action='#'>
 <div class="caja2">
-    <h4>Calibración T. Mosto</h4>
+	<h4>Calibración Temperatura</h4>
 
     <div id="med3_c">med3_c</div><br>
     <select id="medx_temp">
@@ -73,7 +73,7 @@
 
 
 <!calibrar_od>
-<form hidden id="calibrar_od" method="POST" action='#'>
+<form id="calibrar_od" method="POST" action='#'>
 <div class="caja3">
     <h4>Calibración Sensor Oxigeno</h4>
 
@@ -106,7 +106,7 @@
 
 
 <!calibrar_actuacion_ph>
-<form hidden id="calibrar_u" method="POST" action='#'>
+<form id="calibrar_u" method="POST" action='#'>
   <div class="caja4">
         <h4>Umbral Actuadores pH</h4>
         <div> Solución Ácida</div>
@@ -139,7 +139,7 @@
 
 
 <!calibrar_actuacion_temp>
-<form hidden id="calibrar_u_temp" method="POST" action='#'>
+<form id="calibrar_u_temp" method="POST" action='#'>
 <div class="caja3">
     <h4>Umbral Actuador Temperatura</h4>
     <div> RPM Bomba Temperatura</div>

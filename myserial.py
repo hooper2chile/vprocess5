@@ -71,7 +71,7 @@ def set_dtr():
     global save_setpoint1
 
     try:
-        ser = serial.Serial(port='/dev/ttyUSB0', timeout = 1, baudrate = 9600)
+        ser = serial.Serial(port='/dev/ttyAMA0', timeout = 1, baudrate = 9600)
         ser.setDTR(True)
         time.sleep(1)
         ser.setDTR(False)

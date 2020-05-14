@@ -1,3 +1,4 @@
+ <!-- vprocess5-->
 {% extends "base.html" %}
 {% block content %}
 <script type="text/javascript" src="{{ url_for('static', filename='js/my_javascript.js') }}"></script>
@@ -39,16 +40,16 @@
     </font>
 
 
-    <div  class="caja_central_arriba"> Mezclar [rpm]:
+    <div class="caja_central_arriba"> Mezclar [rpm]:
                 <input type="number"
                        id="mezclar"
                        style="width: 50px;"
                        MIN="0"
-                       MAX="1500"
+                       MAX="200"
                        step="1"
-                       value=""
+                       value="50"
                  />
-                 <button  type="submit" class="button_apply"> + </button>         <br>
+                 <button  type="submit" class="button_apply"> + </button>    <br>
                  <input  type="checkbox" id="mezclar_rst" /> Deshabilitar
     </div>
 
@@ -87,7 +88,7 @@
 
             <button  type="submit" class="button_apply"> + </button>     <br>
             <input  type="checkbox" id="ph_rst" /> Deshabilitar   <br>
-            <input  type="checkbox" id="ph_dir" /> Invertir
+            <input hidden type="checkbox" id="ph_dir" /> <!--Invertir-->
     </div>
 
     <!-- Medicion de Temperaturas -->
@@ -112,69 +113,72 @@
     </div>
     </font>
 
+
+
     <!-- FICHA DE PRODUCTO CONCHA Y TORO -->
-
-
-    <!caja6: ficha de producto: densidad>
+    <!caja6: ficha de producto: Cultivo maximo>
         <div class="caja6">
           &emsp;&emsp;&emsp;&emsp;&emsp;
-          <div id="densidad_div_id">Densidad:</div>
+          <div id="cultivo_div_id">Cultivo [A600]:</div>
             <input type="number"
-                         id="densidad_input_id"
+                         id= "cultivo_input_id"
                          style="width: 50px;"
-                         value="1"
-                         MIN="0"
-                         MAX="2000"
-                         step="0.1"
+                         value="0.0"
+                         MIN="0.0"
+                         MAX="2.0"
+                         step="0.001"
             />
             <button  type="submit" class="button_apply"> + </button>
     </div>
 
-    <!caja7: ficha de producto: yan>
+    <!caja7: ficha de producto: Tasa de Crecimiento>
         <div class="caja7">
           &emsp;&emsp;&emsp;&emsp;&emsp;
-          <div id="yan_div_id">Yan:</div>
+          <div id="tasa_div_id">Tasa [h-1]:</div>
             <input type="number"
-                         id="yan_input_id"
+                         id="tasa_input_id"
                          style="width: 50px;"
                          value="1"
-                         MIN="0"
-                         MAX="500"
-                         step="0.1"
+                         MIN="0.0"
+                         MAX="0.5"
+                         step="0.01"
             />
             <button  type="submit" class="button_apply"> + </button>
     </div>
 
-    <!caja8: ficha de producto: pH>
+
+    <!caja8: ficha de producto: Biomasa maximo>
         <div class="caja8">
           &emsp;&emsp;&emsp;&emsp;&emsp;
-          <div id="ph_div_id">pH:</div>
+          <div id="biomasa_div_id">Biomasa [g]:</div>
             <input type="number"
-                         id="ph_input_id"
+                         id="biomasa_input_id"
                          style="width: 50px;"
                          value="1"
-                         MIN="0"
-                         MAX="14"
-                         step="0.1"
+                         MIN="0.0"
+                         MAX="1000.0"
+                         step="0.001"
             />
             <button  type="submit" class="button_apply"> + </button>
     </div>
 
-    <!caja9: ficha de producto: brix>
+
+    <!caja9: ficha de producto: Sustrato inicial>
         <div class="caja9">
           &emsp;&emsp;&emsp;&emsp;&emsp;
-          <div id="brix_div_id">Brix:</div>
+          <div id="sustrato_div_id">Sustrato [g/L]:</div>
             <input type="number"
-                         id="brix_input_id"
+                         id="sustrato_input_id"
                          style="width: 50px;"
                          value="1"
-                         MIN="0"
-                         MAX="100"
-                         step="0.1"
+                         MIN="0.0"
+                         MAX="100.0"
+                         step="0.001"
             />
             <button  type="submit" class="button_apply"> + </button>
     </div>
 
+    <!--
     <!caja10: ficha de producto: Acidez Total>
         <div class="caja10">
           &emsp;&emsp;&emsp;&emsp;&emsp;
@@ -251,7 +255,7 @@
             <button  type="submit" class="button_apply"> + </button>
         </div>
     </font>
-
+    -->
 
 
 </form>

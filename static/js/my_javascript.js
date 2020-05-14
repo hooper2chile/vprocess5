@@ -1,3 +1,4 @@
+//vprocess5
 $(document).ready(function() {
 
     namespace = '/biocl';
@@ -11,9 +12,9 @@ $(document).ready(function() {
 
     //Se escuchan las mediciones de ph, OD, Temp.
     socket.on('Medidas', function(msg) {
-        $('#med1').text('Temp: ' + msg.data[0] + ' º[C]').html();
-        $('#med2').text('pH  : ' + msg.data[1] + ' º[C]').html();
-        $('#med3').text('oD  : ' + msg.data[2] + ' º[C]').html();
+        $('#med1').text('Temp : ' + msg.data[0] + ' º[C]').html();
+        $('#med2').text('pH   : ' + msg.data[1] + ' º[C]').html();
+        $('#med3').text('oD   : ' + msg.data[2] + ' º[C]').html();
     });
 
     //se emiten los setpoints hacia el servidor
@@ -54,15 +55,15 @@ $(document).ready(function() {
 
 
         socket.emit('producto',
-                    { densidad: $('#densidad_input_id').val(),
-                           yan: $('#yan_input_id').val(),
-                            ph: $('#ph_input_id').val(),
-                          brix: $('#brix_input_id').val(),
-                        acidez: $('#acidez_input_id').val(),
-                         fundo: $('#fundo_input_id').val(),
-                          cepa: $('#cepa_input_id').val(),
-                          lote: $('#lote_input_id').val(),
-                         dosis: $('#dosis_input_id').val()
+                    { cultivo: $('#cultivo_input_id').val(),
+                         tasa: $('#tasa_input_id').val(),
+                      biomasa: $('#biomasa_input_id').val(),
+                     sustrato: $('#sustrato_input_id').val()
+                     //acidez: $('#acidez_input_id').val(),
+                     //fundo: $('#fundo_input_id').val(),
+                     //cepa: $('#cepa_input_id').val(),
+                     //lote: $('#lote_input_id').val(),
+                     //dosis: $('#dosis_input_id').val()
                     });
         return false;
     });
@@ -99,26 +100,26 @@ $(document).ready(function() {
 
     //para escuchar datos de ficha de producto
     socket.on('producto', function(msg) {
-        document.getElementById('densidad_input_id').value = msg.set[0];
-        document.getElementById('yan_input_id').value      = msg.set[1];
-        document.getElementById('ph_input_id').value       = msg.set[2];
-        document.getElementById('brix_input_id').value     = msg.set[3];
-        document.getElementById('acidez_input_id').value   = msg.set[4];
-        document.getElementById('fundo_input_id').value    = msg.set[5];
-        document.getElementById('cepa_input_id').value     = msg.set[6];
-        document.getElementById('lote_input_id').value     = msg.set[7];
-        document.getElementById('dosis_input_id').value    = msg.set[8];
+        document.getElementById('cultivo_input_id').value  = msg.set[0];
+        document.getElementById('tasa_input_id').value     = msg.set[1];
+        document.getElementById('biomasa_input_id').value  = msg.set[2];
+        document.getElementById('sustrato_input_id').value = msg.set[3];
+        //document.getElementById('acidez_input_id').value = msg.set[4];
+        //document.getElementById('fundo_input_id').value  = msg.set[5];
+        //document.getElementById('cepa_input_id').value   = msg.set[6];
+        //document.getElementById('lote_input_id').value   = msg.set[7];
+        //document.getElementById('dosis_input_id').value  = msg.set[8];
 
         //aca el codigo para insertar los valores guardados
-        $('#densidad_div_id').text('Densidad: ' + msg.save[0] ).html();
-        $('#yan_div_id'     ).text('Yan     : ' + msg.save[1] ).html();
-        $('#ph_div_id'      ).text('pH      : ' + msg.save[2] ).html();
-        $('#brix_div_id'    ).text('Brix    : ' + msg.save[3] ).html();
-        $('#acidez_div_id'  ).text('Acidez  : ' + msg.save[4] ).html();
-        $('#fundo_div_id'   ).text('Fundo   : ' + msg.save[5] ).html();
-        $('#cepa_div_id'    ).text('Cepa    : ' + msg.save[6] ).html();
-        $('#lote_div_id'    ).text('Lote    : ' + msg.save[7] ).html();
-        $('#dosis_div_id'   ).text('Dosis   : ' + msg.save[8] ).html();
+        $('#cultivo_div_id').text('Cultivo [A600]  : ' + msg.save[0] ).html();
+        $('#tasa_div_id'    ).text('Tasa [h-1]    : ' + msg.save[1] ).html();
+        $('#biomasa_div_id' ).text('Biomasa [g]   : ' + msg.save[2] ).html();
+        $('#sustrato_div_id').text('Sustrato [g/L]: ' + msg.save[3] ).html();
+        //$('#acidez_div_id'  ).text('Acidez  : ' + msg.save[4] ).html();
+        //$('#fundo_div_id'   ).text('Fundo   : ' + msg.save[5] ).html();
+        //$('#cepa_div_id'    ).text('Cepa    : ' + msg.save[6] ).html();
+        //$('#lote_div_id'    ).text('Lote    : ' + msg.save[7] ).html();
+        //$('#dosis_div_id'   ).text('Dosis   : ' + msg.save[8] ).html();
     });
 
 
@@ -148,14 +149,14 @@ $(document).ready(function() {
         console.log(msg.set[1]);
     });
 
-    $('#densidad_div_id' ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#yan_div_id'      ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#ph_div_id'       ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#brix_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#acidez_div_id'   ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#brix_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#fundo_div_id'    ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#cepa_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#lote_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
-    $('#dosis_div_id'    ).css({ 'color': 'white', 'font-size': '110%' });
+    $('#cultivo_div_id' ).css({ 'color': 'white', 'font-size': '110%' });
+    $('#tasa_div_id'    ).css({ 'color': 'white', 'font-size': '110%' });
+    $('#biomasa_div_id' ).css({ 'color': 'white', 'font-size': '110%' });
+    $('#sustrato_div_id').css({ 'color': 'white', 'font-size': '110%' });
+    //$('#acidez_div_id'   ).css({ 'color': 'white', 'font-size': '110%' });
+    //$('#brix_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
+    //$('#fundo_div_id'    ).css({ 'color': 'white', 'font-size': '110%' });
+    //$('#cepa_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
+    //$('#lote_div_id'     ).css({ 'color': 'white', 'font-size': '110%' });
+    //$('#dosis_div_id'    ).css({ 'color': 'white', 'font-size': '110%' });
 });
