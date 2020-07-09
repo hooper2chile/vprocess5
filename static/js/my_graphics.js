@@ -31,30 +31,32 @@ function my_chart(){
             }
           }
 
-          //mediciones de ph, OD, Temp. Socket regenera el grafico con cada llamada!!!
+          //se reciben mediciones de ph, OD, Temp. Socket regenera el grafico con cada llamada!!!
           socket.on('Medidas', function(msg) {
-              $('#med1_g').text('T. Promedio: ' + msg.data[0] + '[C]' ).html();
-              $('#med2_g').text('T. Sombrero: ' + msg.data[1] + '[C]' ).html();
-              $('#med3_g').text('T. Mosto: ' + msg.data[2] + '[C]' ).html();
+              $('#med1_g').text('Temp: ' + msg.data[0] + '[C]' ).html();
+              $('#med2_g').text('pH  : ' + msg.data[1] + '   ' ).html();
+              $('#med3_g').text('oD  : ' + msg.data[2] + '[%]' ).html();
 
               //muestra el setpoint de ph en el grafico real time.
-              $('#ph_g').text('Temperatura Set: ' + msg.set[4]         ).html();
+              $('#ph_g').text('Temperatura Set: ' + msg.set[4]  ).html();
 
-              //grafico ph
+
+
+              //grafico Temperatura
               set_ph.shift();
-              set_ph.push( parseFloat( [msg.set[4] ] ) )
+              set_ph.push( parseFloat( [msg.set[4] ] ) );
 
               med_ph.shift();
-              med_ph.push( parseFloat( [ msg.data[0] ] ) );
+              med_ph.push( parseFloat( [msg.data[0] ] ) );
 
-              var ctx = document.getElementById('myChart').getContext('2d')
+              var ctx = document.getElementById('myChart1').getContext('2d')
               var myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                   labels: time_axis,
 
                   datasets: [{
-                    label: 'T. Promedio',//'TEMP1 Bioreactor',
+                    label: 'Temperatura',//'TEMP1 Bioreactor',
                     data: med_ph,
                     fill: false,
                     lineTension: 0.5,
@@ -103,7 +105,7 @@ function my_chart(){
               });
 
 
-              //grafico oxigeno disuelto
+              //grafico pH
               med_od.shift();
               med_od.push( parseFloat( [ msg.data[1] ] ) );
 
@@ -114,7 +116,7 @@ function my_chart(){
                   labels: time_axis,
 
                   datasets: [{
-                    label: 'T. Sombrero',
+                    label: 'pH',
                     data: med_od,
                     fill: false,
                     lineTension: 0.5,
@@ -145,7 +147,7 @@ function my_chart(){
                              ticks: {
                                  beginAtZero: true,
                                  min: 0,
-                                 max: 50,
+                                 max: 14,
                               }
                         }]
                     }
@@ -153,7 +155,7 @@ function my_chart(){
               });
 
 
-              //Grafico temperatura
+              //Grafico oD
               med_temp.shift();
               med_temp.push( parseFloat( [ msg.data[2] ] ) );
 
@@ -164,7 +166,7 @@ function my_chart(){
                   labels: time_axis,
 
                   datasets: [{
-                    label: 'T. Mosto',
+                    label: 'oD',
                     data: med_temp, //med_temp
                     fill: false,
                     lineTension: 0.5,
@@ -195,7 +197,7 @@ function my_chart(){
                              ticks: {
                                  beginAtZero: true,
                                  min: 0,
-                                 max: 50,
+                                 max: 100,
                               }
                         }]
                     }

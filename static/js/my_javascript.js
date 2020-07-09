@@ -43,7 +43,7 @@ $(document).ready(function() {
         console.log($('#descargar').val());
         console.log($('#temperatura').val());
 
-        console.log('Emitiendo Chekeds');
+        console.log('Emitiendo Checkeds');
         console.log($('#alimentar_rst').is(':checked'));
         console.log($('#mezclar_rst').is(':checked'));
         console.log($('#ph_rst').is(':checked'));
@@ -112,9 +112,9 @@ $(document).ready(function() {
 
         //aca el codigo para insertar los valores guardados
         $('#cultivo_div_id').text('Cultivo [A600]  : ' + msg.save[0] ).html();
-        $('#tasa_div_id'    ).text('Tasa [h-1]    : ' + msg.save[1] ).html();
-        $('#biomasa_div_id' ).text('Biomasa [g]   : ' + msg.save[2] ).html();
-        $('#sustrato_div_id').text('Sustrato [g/L]: ' + msg.save[3] ).html();
+        $('#tasa_div_id'    ).text('Tasa [h-1]    : '  + msg.save[1] ).html();
+        $('#biomasa_div_id' ).text('Biomasa [g]   : '  + msg.save[2] ).html();
+        $('#sustrato_div_id').text('Sustrato [g/L]: '  + msg.save[3] ).html();
         //$('#acidez_div_id'  ).text('Acidez  : ' + msg.save[4] ).html();
         //$('#fundo_div_id'   ).text('Fundo   : ' + msg.save[5] ).html();
         //$('#cepa_div_id'    ).text('Cepa    : ' + msg.save[6] ).html();

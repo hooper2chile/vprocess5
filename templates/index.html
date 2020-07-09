@@ -29,13 +29,13 @@
                      id="alimentar"
                      style="width: 50px;"
                      value=""
-                     MIN="5"
-                     MAX="150"
+                     MIN="0"
+                     MAX="100"
                      step="1"
               />
               <button  type="submit" class="button_apply"> + </button>
               <br><input  type="checkbox" id="alimentar_rst" /> Deshabilitar
-              <br><input hidden type="checkbox" id="alimentar_dir" />
+              <br><input  type="checkbox" id="alimentar_dir" /> Invertir
     </div>
     </font>
 
@@ -71,7 +71,7 @@
 
             <button  type="submit" class="button_apply"> + </button>     <br>
             <input  type="checkbox" id="temperatura_rst" /> Deshabilitar   <br>
-            <input hidden type="checkbox" id="temperatura_dir" />
+            <input  type="checkbox" id="temperatura_dir" /> Invertir
     </div>
     </font>
 
@@ -79,16 +79,16 @@
     <div class="caja_izquierda_abajo"> Configurar pH: <br>
             <input type="number"
                    id="ph"
-                   value=""
+                   value="7"
                    style="width: 50px;"
                    MIN="0"
                    MAX="14"
                    step="0.1"
             />
 
-            <button  type="submit" class="button_apply"> + </button>     <br>
+            <button type="submit" class="button_apply"> + </button>     <br>
             <input  type="checkbox" id="ph_rst" /> Deshabilitar   <br>
-            <input hidden type="checkbox" id="ph_dir" /> <!--Invertir-->
+            <input  type="checkbox" id="ph_dir" /> Invertir
     </div>
 
     <!-- Medicion de Temperaturas -->
@@ -103,8 +103,8 @@
             <br><input  type="number"
                     id="descargar"
                     style="width: 50px;"
-                    MIN="5"
-                    MAX="150"
+                    MIN="0"
+                    MAX="100"
                     step="1"
                     value=""
             />

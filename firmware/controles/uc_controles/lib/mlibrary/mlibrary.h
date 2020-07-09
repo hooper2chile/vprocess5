@@ -1,3 +1,4 @@
+// MODIFICADO PARA Vprocess5 - UdeChile 5 Julio 2020
 #include "Arduino.h"
 #include "Wire.h"
 #include "SoftwareSerial.h"

@@ -1,4 +1,6 @@
 '''
+    Vprocess5 - UdeChile: Felipe Hooper
+
     Google Drive cloud for Bioreactor.
     Macos and rasbian version.
     Application for synchronization.
@@ -11,8 +13,8 @@ logging.basicConfig(filename='/home/pi/vprocess5/log/cloud.log', level=logging.I
 
 
 TIME_SYNC = 120#360#60 #3600 #sync for 3600 [s] = 1 [hr]
-ID = '1V3oyGsuhUjIVEZprf1AAbGK15HhcIr5Q'
-
+#ID = '1V3oyGsuhUjIVEZprf1AAbGK15HhcIr5Q'
+ID = '1BSWSZiKaR8uysl4p1I-GtPwOox449Ddp'
 time.sleep(15)
 
 gdrive = '/home/pi/vprocess5/config/./my_gdrive' #gdrive-linux-rpi

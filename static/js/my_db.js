@@ -28,7 +28,7 @@ $(document).ready(function() {
             temp[i]    = msg.data[i][1]
           }
 
-          if(msg.var=='T_PROMEDIO'){
+          if(msg.var=='TEMPERATURA'){
             var var_options = {animation: {duration: 0}, scales: {yAxes: [{ticks: {beginAtZero: true, min: 0, max:  50,}}]}}
             var data_set     = {      labels: time_ax,
                                       datasets: [{
@@ -44,8 +44,8 @@ $(document).ready(function() {
                               }
           }
 
-          if(msg.var=='T_SOMBRERO'){
-            var var_options = {animation: {duration: 0}, scales: {yAxes: [{ticks: {beginAtZero: true, min: 0, max: 50,}}]}}
+          if(msg.var=='PH'){
+            var var_options = {animation: {duration: 0}, scales: {yAxes: [{ticks: {beginAtZero: true, min: 1, max: 14,}}]}}
             var data_set     = {      labels: time_ax,
                                       datasets: [{
                                                     label: msg.var,
@@ -60,8 +60,8 @@ $(document).ready(function() {
                               }
           }
 
-          if(msg.var=='T_MOSTO'){
-            var var_options = {animation: {duration: 0}, scales: {yAxes: [{ticks: {beginAtZero: true, min: 0, max:  50,}}]}}
+          if(msg.var=='OD'){
+            var var_options = {animation: {duration: 0}, scales: {yAxes: [{ticks: {beginAtZero: true, min: 0, max:  100,}}]}}
             var data_set     = {      labels: time_ax,
                                       datasets: [{
                                                     label: msg.var,

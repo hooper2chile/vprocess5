@@ -1,18 +1,19 @@
 from multiprocessing import Process, Queue, Event
-import zmq, time, serial, sys, logging
+import zmq, time, datetime, serial, sys, logging
 
 logging.basicConfig(filename='/home/pi/vprocess5/log/myserial.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
+DIR="/home/pi/vprocess5/"
 
 #5556: for listen data
 #5557: for publisher data
 
 tau_zmq_connect     = 0.5  #0.3=300 [ms]
 tau_zmq_while_write = 0.25 #0.5=500 [ms]
-tau_zmq_while_read  = 1#0.25 #0.4#0.25   # 0.5=500 [ms]
+tau_zmq_while_read  = 0.5#0.25 #0.4#0.25   # 0.5=500 [ms]
 tau_serial          = 0.01 #0.08   #0.02  #  0.01=10 [ms]
 
-count = 0
+
 save_setpoint1 = 'wf000u000t000r111e0f0.0'
 setpoint_reply_uc = save_setpoint1
 
@@ -52,9 +53,15 @@ def speak(q1,q2):
     topic   = 'w'#'w'
     time.sleep(tau_zmq_connect)
 
-    while True:
-        q1.put("read")
+    a,b = 4,1
 
+    while True:
+        #a = time.time()
+        #if (b-a) > 3.0: # 3.0 <=> 3 segundos!
+        #    q1.put("read")
+        #    b = time.time()
+
+        q1.put("read")  ####probando
         if not q2.empty():
             data = q2.get()
             try:
@@ -71,7 +78,7 @@ def set_dtr():
     global save_setpoint1
 
     try:
-        ser = serial.Serial(port='/dev/ttyAMA0', timeout = 1, baudrate = 9600)
+        ser = serial.Serial(port='/dev/ttyUSB0', timeout = 1, baudrate = 9600)
         ser.setDTR(True)
         time.sleep(1)
         ser.setDTR(False)
@@ -89,7 +96,6 @@ def set_dtr():
 def rs232(q1,q2):
     global save_setpoint1
     global setpoint_reply_uc
-    global count
 
     flag = False
     while not flag:
@@ -131,14 +137,31 @@ def rs232(q1,q2):
                         if action == "read":
                             try:
                                 if ser.is_open:
-                                    #logging.info("myserial_r_action_to_uc: %s ", action)
+                                    logging.info("myserial_r_action_to_uc: %s ", action)
                                     ser.write('r' + '\n')
                                     SERIAL_DATA = ser.readline()
-                                    if SERIAL_DATA != "":
-                                        #logging.info("myserial_r_reply_uc: %s", SERIAL_DATA)
+
+                                    #Prueba para eliminar mediciones erroneas.
+                                    if SERIAL_DATA != "" and len(SERIAL_DATA) >= 50 and len(SERIAL_DATA) <= 94:
+                                        logging.info("myserial_r_reply_uc: %s", SERIAL_DATA)
                                         q2.put(SERIAL_DATA)
+                                        #try:
+                                        #    f = open(DIR + "SERIAL_DATA_BUENO.txt", "a+")
+                                        #    f.write(str(SERIAL_DATA) + "..." + str(len(SERIAL_DATA)) + "..." + time.strftime("Hora__%H__%M__%S") + "\n")
+                                        #    f.close
+                                        #except:
+                                        #    pass
+
                                     else:
-                                        logging.info("myserial_r_reply_uc_VACIO?: %s", SERIAL_DATA)
+                                        try:
+                                            pass
+                                    #        f = open(DIR + "SERIAL_DATA_MALO.txt", "a+")
+                                    #        f.write(str(SERIAL_DATA) + "..." + str(len(SERIAL_DATA)) + "..." + time.strftime("Hora__%H__%M__%S") + "\n")
+                                    #       f.close
+                                        except:
+                                            pass
+
+                                        logging.info("myserial_r_reply_uc_MALOOOOO: %s", SERIAL_DATA)
 
                                     try:
                                         temp = SERIAL_DATA.split()
@@ -149,8 +172,7 @@ def rs232(q1,q2):
                                             #logging.info("SETPOINT_REPLY_UC: %s", setpoint_reply_uc[0:23])
 
                                             if setpoint_reply_uc[0:23] == save_setpoint1:
-                                                pass
-                                                #logging.info("IGUALES:    (save_setpoint1, setpoint_reply_uc) = (%s,%s) ", save_setpoint1, setpoint_reply_uc)
+                                                logging.info("IGUALES:    (save_setpoint1, setpoint_reply_uc) = (%s,%s) ", save_setpoint1, setpoint_reply_uc)
 
                                             elif setpoint_reply_uc != save_setpoint1:
                                                 #logging.info("DIFERENTES: (save_setpoint1, setpoint_reply_uc) = (%s,%s) ", save_setpoint1, setpoint_reply_uc)
@@ -189,12 +211,12 @@ def rs232(q1,q2):
                                 #nuevo
                                 if action[0] == 'w':
                                     save_setpoint1 = action
-                                    #logging.info("************* Se actualizan save_setpoint1 (write setpoint to UC): %s   *************", save_setpoint1)
+                                    logging.info("************* Se actualizan save_setpoint1 (write setpoint to UC): %s   *************", save_setpoint1)
 
 
                             except:
                                 logging.info("no se pudo escribir al uc")
-                                save_setpoint1 = action
+                                #save_setpoint1 = action
                                 logging.info("the last setpoint save")
                                 #ser.close()
                                 #flag = False

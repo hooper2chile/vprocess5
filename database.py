@@ -1,5 +1,6 @@
 #!usr/bin/env python
 # -*- coding: utf-8 -*-
+#vprocess5 - Uchile: Felipe Hooper 14 de mayo
 '''
     Adquisición de datos por sockets (ZMQ) para la base de datos.
 '''
@@ -7,7 +8,7 @@ import os, sys, time, datetime, sqlite3, sqlitebck, logging, communication, zmq
 
 DIR="/home/pi/vprocess5"
 
-logging.basicConfig(filename=DIR + '/log/database.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+logging.basicConfig(filename = DIR + '/log/database.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 TIME_MIN_BD = 1 # 1 [s]
 
 flag_database = "False"
@@ -15,12 +16,14 @@ flag_database_local = False
 
 def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
     #CREACION DE TABLAS TEMP1(Sombrero), TEMP2(Mosto), TEMP_ (promedio). CADA ITEM ES UNA COLUMNA
-    c.execute('CREATE TABLE IF NOT EXISTS T_SOMBRERO (ID INTEGER PRIMARY KEY autoincrement, FECHA_HORA TIMESTAMP NOT NULL, MAGNITUD REAL)')
-    c.execute('CREATE TABLE IF NOT EXISTS T_MOSTO    (ID INTEGER PRIMARY KEY autoincrement, FECHA_HORA TIMESTAMP NOT NULL, MAGNITUD REAL)')
-    c.execute('CREATE TABLE IF NOT EXISTS T_PROMEDIO (ID INTEGER PRIMARY KEY autoincrement, FECHA_HORA TIMESTAMP NOT NULL, MAGNITUD REAL)')
-
     #TABLA FULL CON TODA LA DATA
-    c.execute('CREATE TABLE IF NOT EXISTS PROCESO (ID INTEGER PRIMARY KEY autoincrement, FECHA TIMESTAMP NOT NULL, HORA TIMESTAMP NOT NULL, FUNDO TEXT NOT NULL, CEPA TEXT NOT NULL, T_MOSTO REAL, T_SOMBRERO REAL, T_Promedio REAL, T_Setpoint REAL, Flujo REAL, Densidad REAL, Yan REAL, pH REAL, Brix REAL, Acidez REAL, Lote REAL, Dosis REAL, Bomba1 REAL, Bomba2 REAL)')
+    c.execute('CREATE TABLE IF NOT EXISTS PROCESO (ID INTEGER PRIMARY KEY autoincrement, FECHA TIMESTAMP NOT NULL, HORA TIMESTAMP NOT NULL, CULTIVO REAL, TASA REAL, BIOMASA REAL, SUSTRATO REAL, MEZCLADOR REAL, BOMBA1 REAL, BOMBA2 REAL, T_SETPOINT REAL, TEMPERATURA REAL, pH_SETPOINT REAL, pH REAL )')
+
+
+    #CREACION DE TABLAS TEMP1(Sombrero), TEMP2(Mosto), TEMP_ (promedio). CADA ITEM ES UNA COLUMNA
+    c.execute('CREATE TABLE IF NOT EXISTS TEMPERATURA (ID INTEGER PRIMARY KEY autoincrement, FECHA_HORA TIMESTAMP NOT NULL, MAGNITUD REAL)')
+    c.execute('CREATE TABLE IF NOT EXISTS PH (ID INTEGER PRIMARY KEY autoincrement, FECHA_HORA TIMESTAMP NOT NULL, MAGNITUD REAL)')
+    c.execute('CREATE TABLE IF NOT EXISTS OD (ID INTEGER PRIMARY KEY autoincrement, FECHA_HORA TIMESTAMP NOT NULL, MAGNITUD REAL)')
 
 
     logging.info("Se crearon las tablas!!!")
@@ -28,17 +31,16 @@ def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
     #se guardan las tablas agregados en la db si no existian
     connector.commit()
 
-    #INSERCION DE LOS DATOS MEDIDOS
-    #T.SOMBRERO=: real_data[1];  T.MOSTO=: real_data[2], T.PROMEDIO=: real_data[3]
+    #INSERCION DE LOS DATOS MEDIDOS, TABLA FULL CON TODA LA DATA, NULL es para el ID
+                                                                                                                                                                                        #cultivo            #tasa             #biomasa          #sustrato       #mezclador           #bomba1            #bomba2           #Temp_setpoint         #Temp_measure     #pH_setpoint      #pH_measure
     try:
-        #Insercion solo de los datos de sensores
-        c.execute("INSERT INTO T_MOSTO    VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), real_data[3]))
-        c.execute("INSERT INTO T_SOMBRERO VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), real_data[2]))
-        c.execute("INSERT INTO T_PROMEDIO VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), real_data[1]))
+        c.execute("INSERT INTO PROCESO  VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (datetime.datetime.now().strftime("%Y-%m-%d"), datetime.datetime.now().strftime("%H:%M:%S"), ficha_producto[0], ficha_producto[1], ficha_producto[2], ficha_producto[3], ficha_producto[4], ficha_producto[10], ficha_producto[11], ficha_producto[9], real_data[1], ficha_producto[8], real_data[2] ))
 
-        #TABLA FULL CON TODA LA DATA
-        # NULL es para el ID
-        c.execute("INSERT INTO PROCESO  VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (datetime.datetime.now().strftime("%Y-%m-%d"), datetime.datetime.now().strftime("%H:%M:%S"), ficha_producto[5], ficha_producto[6], real_data[3], real_data[2], real_data[1], ficha_producto[9], ( float(real_data[8])*float(ficha_producto[12]) ), ficha_producto[0], ficha_producto[1], ficha_producto[2], ficha_producto[3], ficha_producto[4], ficha_producto[7], ficha_producto[8], ficha_producto[10], ficha_producto[11] ))
+        #Insercion solo de los datos de sensores
+        c.execute("INSERT INTO PH          VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[3]),2)))
+        c.execute("INSERT INTO OD          VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[2]),2)))
+        c.execute("INSERT INTO TEMPERATURA VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[1]),2)))
+
         logging.info("se insertaron todos los datos en db")
 
     except:
@@ -47,6 +49,18 @@ def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
 
     #se guardan los datos agregados en la db
     connector.commit()
+
+
+    #Se guardan las mediciones para depuracion y orden en la base de datas
+    try:
+        f = open(DIR + "/real_data.txt","w")
+        f.write(str(real_data) + '\n')
+        f.close()
+
+    except:
+        #print "no se pudo guardar el nombre de la DB para ser revisada en app.py"
+        logging.info("NO se logro rescatar los datos de mediciones para depuracion y orden en la base de datos")
+
 
     #Backup DB in RAM to DISK SD
     if BACKUP:
@@ -57,12 +71,7 @@ def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
         sqlitebck.copy(connector, bck)
 
         try:
-            os.system('sqlite3 -header -csv %s "select * from T_SOMBRERO;" > /home/pi/vprocess5/csv/%s' % (filedb,filedb[28:-3])+'T_SOMBRERO.csv' )
-            os.system('sqlite3 -header -csv %s "select * from T_MOSTO;"    > /home/pi/vprocess5/csv/%s' % (filedb,filedb[28:-3])+'T_MOSTO.csv'    )
-            os.system('sqlite3 -header -csv %s "select * from T_PROMEDIO;" > /home/pi/vprocess5/csv/%s' % (filedb,filedb[28:-3])+'T_PROMEDIO.csv' )
-
             os.system('sqlite3 -header -csv %s "select * from PROCESO;"    > /home/pi/vprocess5/csv/%s' % (filedb,filedb[28:-3])+'PROCESO.csv' )
-
             logging.info("\n Backup CSV REALIZADO \n")
 
         except:
@@ -82,7 +91,7 @@ def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
         return True
 
 def main():
-    ficha_producto = [0.0,0.0,0.0,0.0,0.0,"fundo0","cepa0",0,0.0,0,0,0] #ficha_producto[9]=set_data[4]:temparatura set point
+    ficha_producto = [0.0,0.0,0.0,0.0,0.0,"vacio_uchile2","vacio_uchile2",0,0.0,0,0,0] #ficha_producto[9]=set_data[4]:temparatura set point
     ficha_producto_save = ficha_producto                                #ficha_producto[10] = set_data[0]: bomba1
                                                                         #ficha_producto[11] = set_data[3]: bomba2
 
@@ -210,7 +219,6 @@ def main():
                 except:
                     logging.info("no se pudo leer grabar el log de grabar on")
                 #depuracion log
-
             i += 1
 
 

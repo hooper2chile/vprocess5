@@ -26,6 +26,18 @@ void setup() {
   pinMode(A4, OUTPUT);
   pinMode(A5, OUTPUT);
 
+  //pinMode(A0, OUTPUT); //Bomba remontaje
+  pinMode(A1, OUTPUT); //Valvula 1
+  pinMode(A2, OUTPUT); //Valvula 2
+  pinMode(A3, OUTPUT); //Ventilador
+
+  //digitalWrite(A0, HIGH);
+  digitalWrite(A1, HIGH);
+  digitalWrite(A2, HIGH);
+  digitalWrite(A3, HIGH);
+
+  new_write.reserve(65);
+  new_write_w.reserve(65);
   message.reserve(65);
   wdt_enable(WDTO_8S);
 }

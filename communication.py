@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # --*- coding: utf-8 -*--
+#vprocess5
 import sys, zmq, time, logging
 
 DIR="/home/pi/vprocess5"
@@ -247,15 +248,21 @@ def cook_setpoint(set_data, rm_sets):
         #format string
         #convert true or false in checkbox from web client to 0 or 1                                            # + str(set_data[7]) = rst6
         string_rst = str(set_data[5]) + str(set_data[6]) + str(set_data[7]) + str(set_data[8]) + str(set_data[9]) + str(set_data[7])
+
         string_dir = str(set_data[10])+ str(set_data[11])+ str(set_data[12]) + '111'
 
-        ######### para vprocess4 #####################################################
-                    #       bomba1     +     bomba2       +  temperatura
-        #string_dir2 = str(set_data[10])+ str(set_data[11])+ str(set_data[12])  #en deshuso desde 29-09-19
+        #5 JULIO 2020 - Uchile: emit command for actuation zmq server (publisher): 'wph14.0feed100unload100mix100temp100rst111111dir111111\n'
 
+        ######### para vprocess4 #####################################################
+                    #       bomba1     +   bomba2         +  temperatura
+        #string_rst2 = str(set_data[5]) + str(set_data[8]) + str(set_data[9])
+        ######### para vprocess4 #####################################################
+
+
+        ######### para vprocess5 #####################################################
                     #       bomba1     +   bomba2         +  temperatura
         string_rst2 = str(set_data[5]) + str(set_data[8]) + str(set_data[9])
-        ######### para vprocess4 #####################################################
+        ######### para vprocess5 #####################################################
 
         #threshold setting:
         #alimentar
@@ -383,11 +390,15 @@ def cook_setpoint(set_data, rm_sets):
         enable = str(rm_sets[5])
 
         #vprocess4
-        command = 'w' + 'f' + string_feed + 'u' + string_unload + 't' + string_temp + 'r' + string_rst2 + 'e' + enable + 'f' + flujo + '\n'
+        #command = 'wf' + string_feed + 'u' + string_unload + 't' + string_temp + 'r' + string_rst2 + 'e' + enable + 'f' + flujo + '\n'
+
+        #vprocess5
+        command = 'wph' + string_ph + 'f' + string_feed + 'u' + string_unload + 'm' + string_mix + 't' + string_temp + 'r' + string_rst + 'd' + string_dir + '\n'
         logging.info('\n\n' + command + '\n')
 
         #wf000u000t009r000e1f0.2t20.12
-
+        #wph07.0f033u010m0001t053r111111d000111
+        #wf010u010t025r111e0f0.0
     except:
         logging.info('\n' + "************** no se pudo construir command remontaje **************"  + '\n')
 
@@ -396,7 +407,7 @@ def cook_setpoint(set_data, rm_sets):
 
     try:
         f = open(DIR + "/command.txt","a+")
-        f.write(time.strftime(" Hora__%H_%M_%S__Fecha__%d-%m-%y") + "       " + command  )
+        f.write(time.strftime(" Hora__%H_%M_%S__Fecha__%d-%m-%y") + "   " + command )
         f.close()
 
     except OSError:
