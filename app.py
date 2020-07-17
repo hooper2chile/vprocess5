@@ -4,10 +4,12 @@
 from flask import Flask, render_template, session, request, Response, send_from_directory, make_response
 from flask_socketio import SocketIO, emit, disconnect
 
-import os, sys, time, datetime,logging, communication, reviewDB, tocsv
+import os, sys, time, datetime,logging, communication, reviewDB, tocsv, zmq
 DIR="/home/pi/vprocess5"
 
 logging.basicConfig(filename= DIR + '/log/app.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+
+
 
 #CREDENCIALES PARA PAGINAS WEB
 USER   = "user2"
@@ -31,9 +33,9 @@ rm_save = [0,0,0,0,0,0]  #mientras que rm_sets[4] se usara solo en app.py para l
 
 task = ["grabar", False]
 flag_database = False
-#            0   1   2    3   4    5 6 7 8 9 10 11 12
-#set_data = [10, 0, 7.0, 10, 25.0, 1,1,1,1,1,0, 0, 0]  # increiblemente uno de estos hacia partir en activado el sistema de motores...
-set_data = [10,  1, 7.0,   10,  25,  1,1,1,1,1,0, 0, 0]
+#            0   1   2    3   4    5 6 7 8 9 10 11 12 13
+#set_data = [10, 0, 7.0, 10, 25.0, 1,1,1,1,1,0, 0, 0, 0]  # increiblemente uno de estos hacia partir en activado el sistema de motores...
+set_data = [10,  1, 7.0, 10, 25,   1,1,1,1,1,0, 0, 0, 0]
 #set_data[8] =: rst2 (reset de bomba2)
 #set_data[9] =: rst3 (reset de bomba temperatura)
 #set_data[5] =: rst1 (reset de bomba1)
@@ -45,8 +47,6 @@ ficha_producto_save = ficha_producto                                  #ficha_pro
                                                                       #ficha_producto[11] = set_data[3]: bomba2
                                                                       #ficha_producto[12] = rm_sets[4]*rm_sets[5] : para saber cuando
                                                                       #enciende y cuando apaga el remontaje y se multiplica por el flujo en base de datos.
-
-
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -244,7 +244,7 @@ def my_json(dato):
 def setpoints(dato):
     global set_data
     #se reciben los nuevos setpoints
-    set_data = [ dato['alimentar'], dato['mezclar'], dato['ph'], dato['descarga'], dato['temperatura'], dato['alimentar_rst'], dato['mezclar_rst'], dato['ph_rst'], dato['descarga_rst'], dato['temperatura_rst'], dato['alimentar_dir'], dato['ph_dir'], dato['temperatura_dir'] ]
+    set_data = [ dato['alimentar'], dato['mezclar'], dato['ph'], dato['descarga'], dato['temperatura'], dato['alimentar_rst'], dato['mezclar_rst'], dato['ph_rst'], dato['descarga_rst'], dato['temperatura_rst'], dato['alimentar_dir'], dato['ph_dir'], dato['temperatura_dir'], dato['descarga_dir']  ]
 
     try:
         set_data[0] = int(set_data[0])   #alimentar (bomba1)
@@ -264,6 +264,7 @@ def setpoints(dato):
         set_data[10]= int(set_data[10]) #alimentar_dir
         set_data[11]= int(set_data[11]) #ph_dir
         set_data[12]= int(set_data[12]) #temperatura_dir
+        set_data[13]= int(set_data[13]) #descarga_dir
 
         save_set_data = set_data
 
@@ -356,7 +357,14 @@ def calibrar_ph(dato):
             f.write(str(coef_ph_set) + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
             f.close()
             #acá va el codigo que formatea el comando de calibración.
-            communication.calibrate(0,coef_ph_set)
+            calibrar_ph = communication.calibrate(0,coef_ph_set)
+            #Publisher set_data commands al ZMQ suscriptor de myserial.py
+            port = "5556"
+            context = zmq.Context()
+            socket = context.socket(zmq.PUB)
+            socket.bind("tcp://*:%s" % port)
+            #Publisher set_data commands
+            socket.send_string("%s %s" % (topic, calibrar_ph))
 
         except:
             pass
@@ -415,7 +423,15 @@ def calibrar_od(dato):
             f.write(str(coef_od_set) + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
             f.close()
 
-            communication.calibrate(1,coef_od_set)
+            #acá va el codigo que formatea el comando de calibración.
+            calibrar_od = communication.calibrate(1,coef_od_set)
+            #Publisher set_data commands al ZMQ suscriptor de myserial.py
+            port = "5556"
+            context = zmq.Context()
+            socket = context.socket(zmq.PUB)
+            socket.bind("tcp://*:%s" % port)
+            #Publisher set_data commands
+            socket.send_string("%s %s" % (topic, calibrar_od))
 
 
         except:
@@ -450,7 +466,15 @@ def calibrar_temp(dato):
 
     try:
         coef_temp_set = [m_temp, n_temp]
-        communication.calibrate(2,coef_temp_set)
+        #acá va el codigo que formatea el comando de calibración.
+        calibrar_temp = communication.calibrate(2,coef_temp_set)
+        #Publisher set_data commands al ZMQ suscriptor de myserial.py
+        port = "5556"
+        context = zmq.Context()
+        socket = context.socket(zmq.PUB)
+        socket.bind("tcp://*:%s" % port)
+        #Publisher set_data commands
+        socket.send_string("%s %s" % (topic, calibrar_temp))
 
         f = open(DIR + "/coef_temp_set.txt","w")
         f.write(str(coef_temp_set) + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
@@ -544,44 +568,61 @@ def background_thread1():
     measures = [0,0,0,0,0,0,0]
     save_set_data = [20,0,0,20,0,1,1,1,1,1,0,0,0]
 
+    topic   = 'w'
+    #####Publisher part: publicador las lecturas obtenidas al zmq suscriptor de ficha_producto en la base de datos.
+    port_pub = "5554"
+    context_pub = zmq.Context()
+    socket_pub = context_pub.socket(zmq.PUB)
+    socket_pub.bind("tcp://*:%s" % port_pub)
+    #####Publisher part: publica las lecturas obtenidas al zmq suscriptor de la base de datos.
+
+    #Publisher set_data commands al ZMQ suscriptor de myserial.py
+    port = "5556"
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.bind("tcp://*:%s" % port)
+    #Publisher set_data commands
+
+    #####Listen measures (suscriptor de las mediciones)
+    port_sub = "5557"
+    context_sub = zmq.Context()
+    socket_sub = context_sub.socket(zmq.SUB)
+    socket_sub.connect ("tcp://localhost:%s" % port_sub)
+    topicfilter = "w"
+    socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
+    #####Listen measures
 
     while True:
         global set_data, rm_sets, rm_save, ficha_producto, rm3, rm5
         try:
             myList = ','.join(map(str, ficha_producto))
-            communication.zmq_client_data_speak_website(myList)    #para database
+            #preparo la ficha_producto y la envio por ZMQ publicador del canal 5557 a la base de datos
+            socket_pub.send_string("%s %s" % (topic, myList))
 
-            ###### se emite setpoint solo si han cambiado!!! ####################################
-            for i in range(0,len(set_data)):
-                if save_set_data[i] != set_data[i]:
-                    communication.cook_setpoint(set_data,rm_sets)
-                    save_set_data = set_data
-                    #las actualizaciones de abajo deben ir aqui para que aplique la sentencia "!=" en el envio de datos para ficha_producto hacia la Base de Datos
-                    ficha_producto[9]  = save_set_data[4]*(1 - save_set_data[9])  #setpoint de temperatura
-                    ficha_producto[10] = save_set_data[0]*(1 - save_set_data[5])  #bomba1
-                    ficha_producto[11] = save_set_data[3]*(1 - save_set_data[8])  #bomba2
-                    ficha_producto[4]  = save_set_data[1]*(1 - save_set_data[6])  #mezclador
-                    ficha_producto[8]  = save_set_data[2]*(1 - save_set_data[7])  #setpoint pH
-
-                    f = open(DIR + "/ficha_producto_PLUS.txt","w")
-                    f.write(str(ficha_producto) + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
-                    f.close()
+            #preparo el setpoint y o mando por el ZMQ publicador del canal 5556 a myserial.py
+            send_setpoint = communication.cook_setpoint(set_data,rm_sets)
+            socket.send_string("%s %s" % (topic, send_setpoint))
 
 
-            logging.info("\n ············· SE recalculan los tiempos de remontaje ·············\n")
-            ######## se emite setpoint solo si han cambiado!!! ####################################
+            save_set_data = set_data
+            #las actualizaciones de abajo deben ir aqui para que aplique la sentencia "!=" en el envio de datos para ficha_producto hacia la Base de Datos
+            ficha_producto[9]  = save_set_data[4]*(1 - save_set_data[9])  #setpoint de temperatura
+            ficha_producto[10] = save_set_data[0]*(1 - save_set_data[5])  #bomba1
+            ficha_producto[11] = save_set_data[3]*(1 - save_set_data[8])  #bomba2
+            ficha_producto[4]  = save_set_data[1]*(1 - save_set_data[6])  #mezclador
+            ficha_producto[8]  = save_set_data[2]*(1 - save_set_data[7])  #setpoint pH
 
         except:
             #pass
-            logging.info("\n ············· no se pudieron recalcular los tiempos de remontaje ·············\n")
+            logging.info("\n ············· no se pudo enviar datos a los destinatarios ·············\n")
 
 
         try:
             #####################################################################################
             #ZMQ DAQmx download data from micro controller + acondicionamiento de variables
-            temp_ = communication.zmq_client().split()
+            temp_ = socket_sub.recv().split() #se obtienen los datos publicados desde el ZMQ de myserial (esta linea es del suscriptor al puerto 5557)
 
-            measures[0] = temp_[1]  #Temp_
+            measures[0] = temp_[1][2:7] #Temp_
             measures[1] = 43#temp_[1]  #pH
             measures[2] = 34#temp_[1]  #oD
             measures[3] = 66#temp_[1]  #
@@ -589,19 +630,18 @@ def background_thread1():
             #measures[5] = temp_[1]  #
             #measures[6] = temp_[1]  #Iph
             #####################################################################################
-
-            ##logging.info("\n Se ejecuto Thread 1 emitiendo %s\n" % set_data)
-            socketio.sleep(0.025)   #probar con 0.05
+            logging.info("\n Se ejecuto Thread 1 emitiendo %s\n" % set_data)
             logging.info("\n SE ACTUALIZARON LAS MEDICIONES y SETPOINTS \n")
 
 
-        except:
+        except zmq.Again:
             #pass
             logging.info("\n NO SE ACTUALIZARON LAS MEDICIONES NI SETPOINTS \n")
 
 
         #se termina de actualizar y se emiten las mediciones y setpoints para hacia clientes web.-
         socketio.emit('Medidas', {'data': measures, 'set': set_data}, namespace='/biocl')
+        socketio.sleep(0.03)
 
 
 if __name__ == '__main__':

@@ -95,15 +95,24 @@ def main():
     ficha_producto_save = ficha_producto                                #ficha_producto[10] = set_data[0]: bomba1
                                                                         #ficha_producto[11] = set_data[3]: bomba2
 
-    #####Listen measures - estructura para zmq listen ###################################
-    tau_zmq_connect = 0.3
-    port_sub = "5554"
-    context_sub = zmq.Context()
-    socket_sub = context_sub.socket(zmq.SUB)
-    socket_sub.connect ("tcp://localhost:%s" % port_sub)
+    #####Listen measures - estructura para zmq listen de ficha_producto ################
     topicfilter = "w"
-    socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
-    time.sleep(tau_zmq_connect)
+    tau_zmq_connect = 0.3
+
+    port_sub1 = "5554"
+    context_sub1 = zmq.Context()
+    socket_sub1 = context_sub1.socket(zmq.SUB)
+    socket_sub1.connect ("tcp://localhost:%s" % port_sub1)
+    socket_sub1.setsockopt(zmq.SUBSCRIBE, topicfilter)
+
+
+    #####Listen measures - estructura para zmq real_data
+    port_sub2 = "5557"
+    context_sub2 = zmq.Context()
+    socket_sub2 = context_sub2.socket(zmq.SUB)
+    socket_sub2.connect ("tcp://localhost:%s" % port_sub2)
+    socket_sub2.setsockopt(zmq.SUBSCRIBE, topicfilter)
+    #espero y retorno valor
     ####################################################################################
 
     i = 0                      #Hora__%H_%M_%S__Fecha__%d-%m-%y
@@ -156,12 +165,16 @@ def main():
         i += 1
         while flag_database_local:
 
-            #ZMQ connection for download data #string= socket_sub.recv(flags=zmq.NOBLOCK).split()
-            real_data = communication.zmq_client().split()
+            #ZMQ connection for download real_data
+            try:
+                real_data = socket_sub2.recv(flags=zmq.NOBLOCK).split()
+
+            except zmq.Again:
+                pass
 
             #ZMQ connection for download data ficha_producto
             try:
-                ficha_producto = socket_sub.recv(flags=zmq.NOBLOCK).split()[1];
+                ficha_producto = socket_sub1.recv(flags=zmq.NOBLOCK).split()[1];
                 ficha_producto = ficha_producto.split(",")
                 ficha_producto_save = ficha_producto
                 logging.info("ficha de producto a continuacion: ")

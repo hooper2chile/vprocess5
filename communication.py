@@ -15,8 +15,7 @@ logging.basicConfig(filename= DIR + '/log/communication.log', level=logging.INFO
 #set_data = [ dato['alimentar'], dato['mezclar'], dato['ph'], dato['descarga'], dato['temperatura'], dato['alimentar_rst'], dato['mezclar_rst'], dato['ph_rst'], dato['descarga_rst'], dato['temperatura_rst'], dato['alimentar_dir'], dato['ph_dir'], dato['temperatura_dir'] ]
 
 temp_save_set_data = None
-tau_zmq_connect = 0.3 #0.3 [s]: no ha funcionado con menos
-tau_zmq_while_read = 0.3
+tau_zmq_connect = 0.1 #0.3 [s]: no ha funcionado con menos
 
 SPEED_MAX_MIX = 1500
 SPEED_MAX = 150
@@ -36,63 +35,6 @@ PH_MAX = 14
 
 command_save = "vacio"
 
-
-#download data measures with client zmq
-def published_setpoint(set_data):
-    #Publisher set_data commands
-    port = "5556"
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.bind("tcp://*:%s" % port)
-    topic   = 'w'
-    #espero y envio valor
-    time.sleep(tau_zmq_connect)
-    socket.send_string("%s %s" % (topic, set_data))
-
-    return True
-
-
-def zmq_client():
-    #####Listen measures
-    port_sub = "5557"
-    context_sub = zmq.Context()
-    socket_sub = context_sub.socket(zmq.SUB)
-    socket_sub.connect ("tcp://localhost:%s" % port_sub)
-    topicfilter = "w"
-    socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
-    #espero y retorno valor
-    time.sleep(tau_zmq_connect)
-
-    return socket_sub.recv()
-
-
-###### Funiones para intercambio de datos entre app.py y databse.py: datos desde la web"
-def zmq_client_data_speak_website(data):
-    #####Publisher part: publica las lecturas obtenidas.
-    port_pub = "5554"
-    context_pub = zmq.Context()
-    socket_pub = context_pub.socket(zmq.PUB)
-    socket_pub.bind("tcp://*:%s" % port_pub)
-    topic   = 'w'
-    time.sleep(tau_zmq_connect)
-    socket_pub.send_string("%s %s" % (topic, data))
-    time.sleep(tau_zmq_while_read) #Tiempo de muestreo menor para todas las aplicaciones que recogen datos por ZMQ.
-    return True
-
-
-def zmq_client_data_listen_website():
-    #####Listen measures
-    port_sub = "5554"
-    context_sub = zmq.Context()
-    socket_sub = context_sub.socket(zmq.SUB)
-    socket_sub.connect ("tcp://localhost:%s" % port_sub)
-    topicfilter = "w"
-    socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
-    #espero y retorno valor
-    time.sleep(tau_zmq_connect)
-    data = socket_sub.recv(flags=zmq.NOBLOCK)
-    return data
-###### Funiones para intercambio de datos entre app.py y databse.py: datos desde la web"
 
 
 
@@ -160,12 +102,13 @@ def calibrate(var, coef):
         f = open(DIR + "/coef_m_n.txt","w")
         f.write(coef_cook + '\n')
         f.close()
-        published_setpoint(coef_cook)
+        #published_setpoint(coef_cook)
 
     except:
         pass
         #logging.info("no se pudo guardar set de calibrate()")
 
+    return coef_cook
 
 
 # var = 1 => ph
@@ -232,11 +175,13 @@ def actuador(var,u_set):
         f = open(DIR + "/actuador.txt","w")
         f.write(u_cook + '\n')
         f.close()
-        published_setpoint(u_cook);
+        #published_setpoint(u_cook);
 
     except:
         pass
         #logging.info("no se pudo guardar set de actuador()")
+
+    return u_cook
 
 
 
@@ -246,23 +191,12 @@ def cook_setpoint(set_data, rm_sets):
 
     try:
         #format string
-        #convert true or false in checkbox from web client to 0 or 1                                            # + str(set_data[7]) = rst6
-        string_rst = str(set_data[5]) + str(set_data[6]) + str(set_data[7]) + str(set_data[8]) + str(set_data[9]) + str(set_data[7])
+        #convert true or false in checkbox from web client to 0 or 1
+                    #   rst_bomba1    +      rst_MIX     +    rst_pH        +   rst_bomba2     +   rst_temperatura
+        string_rst = str(set_data[5]) + str(set_data[6]) + str(set_data[7]) + str(set_data[8]) + str(set_data[9])
+        string_dir = str(set_data[10]) + str(set_data[11]) + str(set_data[12]) + str(set_data[13])
+                    #  dir_feed        +      dir_pH       +    dir_Temp       + dir_unload
 
-        string_dir = str(set_data[10])+ str(set_data[11])+ str(set_data[12]) + '111'
-
-        #5 JULIO 2020 - Uchile: emit command for actuation zmq server (publisher): 'wph14.0feed100unload100mix100temp100rst111111dir111111\n'
-
-        ######### para vprocess4 #####################################################
-                    #       bomba1     +   bomba2         +  temperatura
-        #string_rst2 = str(set_data[5]) + str(set_data[8]) + str(set_data[9])
-        ######### para vprocess4 #####################################################
-
-
-        ######### para vprocess5 #####################################################
-                    #       bomba1     +   bomba2         +  temperatura
-        string_rst2 = str(set_data[5]) + str(set_data[8]) + str(set_data[9])
-        ######### para vprocess5 #####################################################
 
         #threshold setting:
         #alimentar
@@ -389,32 +323,27 @@ def cook_setpoint(set_data, rm_sets):
         #str flag rm_enable
         enable = str(rm_sets[5])
 
-        #vprocess4
-        #command = 'wf' + string_feed + 'u' + string_unload + 't' + string_temp + 'r' + string_rst2 + 'e' + enable + 'f' + flujo + '\n'
 
         #vprocess5
         command = 'wph' + string_ph + 'f' + string_feed + 'u' + string_unload + 'm' + string_mix + 't' + string_temp + 'r' + string_rst + 'd' + string_dir + '\n'
         logging.info('\n\n' + command + '\n')
-
-        #wf000u000t009r000e1f0.2t20.12
         #wph07.0f033u010m0001t053r111111d000111
-        #wf010u010t025r111e0f0.0
+
     except:
         logging.info('\n' + "************** no se pudo construir command remontaje **************"  + '\n')
 
-    #published for put in queue and write in serial port
-    published_setpoint(command)
+    #para respaldo de comandos
+    if command != command_save:
+        try:
+            command_save = command
+            f = open(DIR + "/command.txt","a+")
+            f.write(time.strftime(" Hora__%H_%M_%S__Fecha__%d-%m-%y") + "   " + command )
+            f.close()
 
-    try:
-        f = open(DIR + "/command.txt","a+")
-        f.write(time.strftime(" Hora__%H_%M_%S__Fecha__%d-%m-%y") + "   " + command )
-        f.close()
+        except OSError:
+            logging.info('\n' + "no se pudo guardar el command en el archivo de texto" + '\n')
 
-    except OSError:
-        #pass
-        logging.info('\n' + "no se pudo guardar el command en el archivo de texto" + '\n')
-
-    return True
+    return command
 
 
 

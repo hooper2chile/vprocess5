@@ -37,9 +37,14 @@ void setup() {
   digitalWrite(A3, HIGH);
 
   new_write.reserve(65);
-  new_write_w.reserve(65);
   message.reserve(65);
   wdt_enable(WDTO_8S);
+
+
+  //lcd.begin(16, 2);
+  //lcd.setRGB(colorR, colorG, colorB);
+  //lcd.print("hello, world!");
+  //delay(1000);
 }
 
 void loop() {
@@ -47,16 +52,13 @@ void loop() {
       if ( validate() ) {
           //PORTB = 1<<PB0;
           switch ( message[0] ) {
-              case 'r':
-                rtds_sensors();
-                daqmx();
-                broadcast_setpoint(0);
-                break;
-
               case 'w':
-                //Serial.println("w: " + message); //debug
+                rtds_sensors();
+                control_ph();
+                control_temp();
                 daqmx();
-                broadcast_setpoint(1);
+                broadcast_setpoint();
+                //lcd_i2c_grove();
                 break;
 
               case 'c':
@@ -67,13 +69,7 @@ void loop() {
               case 'u':
                 actuador_umbral();
                 break;
-              /*
-              case 'p': //remontaje set
-                //Serial.println("p :" + message); //debug
-                daqmx();
-                broadcast_setpoint(1);
-                break;
-              */
+
               default:
                 break;
           }

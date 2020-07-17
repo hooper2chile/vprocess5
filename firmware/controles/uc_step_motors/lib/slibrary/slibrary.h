@@ -79,11 +79,16 @@ uint16_t count_m5 = 0;
 uint8_t rst1 = 0;  uint8_t rst2 = 0;  uint8_t rst3 = 0;
 uint8_t rst4 = 0;  uint8_t rst5 = 0;  uint8_t rst6 = 0;
 
+uint8_t rsta = 1;  uint8_t rstb = 1;
+
 //DIRECTION SETUP
 uint8_t dir1 = 1;  uint8_t dir2 = 1;  uint8_t dir3 = 1;
 uint8_t dir4 = 1;  uint8_t dir5 = 1;  uint8_t dir6 = 1;
 
-uint8_t myphset  = 0;
+char    ph_select = 0;
+char  temp_select = 0;
+
+uint8_t myph      = 0;
 uint8_t myph_a    = 0;
 uint8_t myph_b    = 0;
 uint8_t myph_a_save = 0;
@@ -92,8 +97,8 @@ uint8_t myph_b_save = 0;
 
 uint8_t myfeed   = 0;
 uint8_t myunload = 0;
-uint8_t mymix    = 0;
 uint8_t mytemp   = 0;
+
 
 uint8_t myfeed_save   = 0;
 uint8_t mytemp_save   = 0;
@@ -105,19 +110,9 @@ uint8_t myph2_save    = 0;
 String  message = "";
 boolean stringComplete = false;
 
-char    ph_var     = "";   String  ph_set     = "";
-String  feed_var   = "";   String  feed_set   = "";
-String  unload_var = "";   String  unload_set = "";
-String  mix_var    = "";   String  mix_set    = "";
-String  temp_var   = "";   String  temp_set   = "";
-
 
 //_BV(x) = 1 << x
-inline void set_motor ( uint16_t *count,
-                        uint16_t *count_set,
-                        volatile uint8_t *MOT,
-                                 uint8_t START )
-{
+inline void set_motor ( uint16_t *count, uint16_t *count_set, volatile uint8_t *MOT, uint8_t START ) {
   if ( *count == *count_set ) {
     *MOT |= START;
     *count = 0;
@@ -133,11 +128,8 @@ inline void set_motor ( uint16_t *count,
 
 //_BV(x) = 1 << x
 //rstx=0 (enable); dirx=1 (cw), else ccw.
-inline void setup_dir_rst ( uint8_t RST,    uint8_t DIR,  uint8_t *var_x,
-                            uint8_t *rst_x, uint8_t *dir_x,
-                            volatile uint8_t *PORT_1,
-                            volatile uint8_t *PORT_2 )
-{ //PORT_1:
+inline void setup_dir_rst ( uint8_t RST, uint8_t DIR, uint8_t *var_x, uint8_t *rst_x, uint8_t *dir_x, volatile uint8_t *PORT_1, volatile uint8_t *PORT_2 ) {
+  //PORT_1:
   if( !(*rst_x) ) {
     if ( !(*var_x) )
       *PORT_1 &= ~RST;
@@ -157,7 +149,7 @@ inline void setup_dir_rst ( uint8_t RST,    uint8_t DIR,  uint8_t *var_x,
 
 //ISR: Function of Interruption in timer one. _BV(x) = 1 << x
 void motor_control() {
-  PORT_CONTROL |= (1 << START_CONTROL); //PIN UP
+  PORT_CONTROL |= (1 << START_CONTROL);     //PIN UP
   set_motor(&count_m1, &count_m1_set, &MOT1, _BV(START1) );
   set_motor(&count_m2, &count_m2_set, &MOT2, _BV(START2) );
 
@@ -196,36 +188,67 @@ void serialEvent() {
   }
 }
 
-
 //clean strings
 void clean_strings() {
   stringComplete = false;
-
-  ph_var     = "";  feed_var = "";  unload_var = "";  temp_var = "";
-  mix_var    = "";  ph_set   = "";  feed_set   = "";  temp_set = "";
-  unload_set = "";  mix_set  = "";  message    = "";
+  message    = "";
 }
 
 
-//message format write values: wpha140feed100unload100mix1500temp100rst111111dir111111
-//wphb040feed010unload010mix1500temp010rst000000dir111111
 int validate_write() {
-  if ( message[0] == 'w' ) return 1;
+  if ( (message[0] == 'a' || message[0] == 'b' || message[0] == 'n' ) && message[11] == 'm' ) return 1;
   else return 0;
-
 }
 
 
 void crumble() {  //se puede alivianar usando .toFloat() directamente despues de substring
   //setting setpoints
-  myfeed   = message.substring(2,5).toInt();
-  myunload = message.substring(6,9).toInt();
-  //mymix    = mix_set.toInt();
-  mytemp   = message.substring(10,13).toInt();
+  myfeed   = message.substring(5,8).toInt();
+  rst1 = int(INT(message[22]));  //rst_feed
+  dir1 = int(INT(message[27]));  //dir_feed
 
-  rst1 = int(INT(message[14]));  //rst_feed
-  rst2 = int(INT(message[15]));  //rst_unload
-  rst3 = int(INT(message[16]));  //rest_temp
+
+  myunload = message.substring(8,11).toInt();
+  rst4 = int(INT(message[25]));  //rst_unload
+  dir4 = int(INT(message[30]));  //dir_feed
+
+
+  mytemp = message.substring(18,21).toInt();
+  rst5 = int(INT(message[26]));  //rst_temp
+  dir5 = int(INT(message[29]));  //dir_temp
+  temp_select = message[17];
+
+
+  myph      = message.substring(1,4).toInt();
+  ph_select = message[0];
+  rst3 = int(INT(message[24]));  //rst_ph
+  dir2 = int(INT(message[28]));  //rst_ph
+
+  if (rst3 == 0) {
+    if ( ph_select == 'a' ) {
+        myph_a = myph;
+        myph_b = 0;
+
+        rstb = 1; //1=OFF Base bomb
+        rsta = 0;
+    }
+    else if ( ph_select == 'b' ) {
+        myph_a = 0;
+        myph_b = myph;
+
+        rsta = 1; //1=OFF Acid Bomb
+        rstb = 0;
+    }
+  }
+
+  else if (rst3 == 1) { //rst3 apaga todas las bombas de pH
+      rsta = 1;
+      rstb = 1;
+  }
+
+
+  //a100f100100m1500tc100r00000111\n
+
 
   return;
 }

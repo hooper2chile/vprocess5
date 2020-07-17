@@ -38,33 +38,26 @@ void setup() {
   //inicia enviando apagado total al uc_step_motor
   mySerial.print(new_write);
 
+
+  lcd.begin(16, 2);
+  lcd.setRGB(colorR, colorG, colorB);
+
   wdt_enable(WDTO_8S);
 }
 
 void loop() {
   if ( stringComplete ) {
       if ( validate_write() ) {
-        //se "desmenuza" el command de setpoints
-        crumble();
 	      cooler(rst1, rst2, rst3);
-
-        //###################################################################################
-        //Codigo para bomba remontaje
-        remontaje(pump_enable);
-        //###################################################################################
-
-        //nuevo control de temperatura con agua fria y caliente (no PID)
-        control_temp(rst3);
-        // fin control temperatura
-
-        if (message[0] == 'w') broadcast_setpoint(1);
-        else                   broadcast_setpoint(0);
+        lcd_i2c_grove();
+        //funcion para mezclador dragonlab
+        if (message[0] == 'n' || message[0] == 'a'|| message[0] == 'b') broadcast_setpoint(1);
+        else                                                            broadcast_setpoint(0);
 
       }
-      else Serial.println("bad validate");
+      else Serial.println("BAD command to uc_controles: " + message);
 
       clean_strings();
       wdt_reset();
   }
-  //wdt_reset();
 }

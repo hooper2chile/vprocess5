@@ -4,6 +4,13 @@
 #include "Adafruit_ADS1015.h"
 Adafruit_ADS1115 ads1(0x49);
 
+//#include "rgb_lcd.h"
+//rgb_lcd lcd;
+
+const int colorR = 255;
+const int colorG = 0;
+const int colorB = 0;
+
 #define rtd1 101
 #define rtd2 102
 
@@ -11,24 +18,13 @@ Adafruit_ADS1115 ads1(0x49);
 #define iINT(x)   (x+48)  //inverse ascii convertion
 
 #define SPEED_MIN 2.0
-#define SPEED_MAX 100     //[RPM]
+#define SPEED_MAX 150     //[RPM]
 #define TEMP_MAX  60      //[ºC]
 
 //#define REMONTAJE_PIN  A0 //bomba remontaje
 #define AGUA_FRIA      A1 //D10 = rele 1 (cable rojo)
 #define AGUA_CALIENTE  A2 //D11 = rele 2 (cable amarillo)
 #define VENTILADOR     A3 //ventilador
-
-#define k0 0.1
-#define k1 0.2//0.2
-#define k2 0.3//0.3
-#define k3 0.4//0.4
-#define k4 0.5
-#define k5 0.6
-#define k6 0.7
-#define k7 0.8
-#define k8 0.9
-#define k9 1.0
 
 #define Gap_temp0 0.5
 #define Gap_temp1 1.0    //1C
@@ -50,9 +46,7 @@ Adafruit_ADS1115 ads1(0x49);
 
 
 String message     = "";
-String new_write   = "";
-String new_write_w = "wf000u000t000r111e0f0.0t18.1\n";
-//String new_write_t = "20.0\n";
+String new_write   = "b000f000000m0000tn000r111111111\n"; //"x100f100100m1500tx100r11111111\n";
 
 boolean stringComplete = false;  // whether the string is complete
 
@@ -60,7 +54,7 @@ boolean stringComplete = false;  // whether the string is complete
 uint8_t rst1 = 1;  uint8_t rst2 = 1;  uint8_t rst3 = 1;  uint8_t rst4 = 1;  uint8_t rst5 = 1;
 
 //DIRECTION SETUP
-char dir1 = 1;  char dir2 = 1;  char dir3 = 1;
+uint8_t dir1 = 1;  uint8_t dir2 = 1;  uint8_t dir3 = 1; uint8_t dir4 = 1;
 
 // for incoming serial data
 float Byte0 = 0;  char cByte0[15] = "";  //por que no a 16?
@@ -76,7 +70,9 @@ float Byte8 = 0;  char cByte8[15] = "";  //for setpont confirmation //no se nece
 
 //calibrate function()
 char  var = '0';
-float umbral_a, umbral_b, umbral_temp = SPEED_MAX;
+float umbral_a = SPEED_MAX;
+float umbral_b = SPEED_MAX;
+float umbral_temp = SPEED_MAX;
 
 //******//******//******//******//******//******/
 //VARIABLES DE CONTROL pH y Temperatura
@@ -183,7 +179,6 @@ void rtd2_sensor() {
 }
 
 
-
 rtds_sensors(){
   //rtd1_sensor();
   rtd2_sensor();
@@ -228,10 +223,119 @@ void serialEvent() {
   }
 }
 
+
 void i2c_send_command(String command, uint8_t slave) {   //slave = 2: slave tradicional. 3 es el nuevo
   Wire.beginTransmission(slave); // transmit to device #slave: [2,3]
   Wire.write(command.c_str());   // sends value byte
   Wire.endTransmission();        // stop transmitting
+}
+
+
+// Validate and crumble SETPOINT from serial in raspberry (5 julio 2020. Esquema I2C UdeChile:
+int validate() {
+    //message format write values from raspberry-pi(serial): wph07.0f017u010m0001t030r111111d000111
+    if ( message[0] == 'w' ) {
+          myph_set     = message.substring(3,7).toFloat();
+          myfeed_set   = message.substring(8,11).toInt();
+          myunload_set = message.substring(12,15).toInt();
+          mymix_set    = message.substring(16,20).toInt();
+          mytemp_set   = message.substring(21,24).toFloat();
+
+          rst1 = int(INT(message[25]));  //rst_feed    (bomba1)
+          rst2 = int(INT(message[26]));  //rst_mix     (mezclador)
+          rst3 = int(INT(message[27]));  //rst_pH      (bombas pH)
+          rst4 = int(INT(message[28]));  //rest_unload (bomba2)
+          rst5 = int(INT(message[29]));  //rst_temp    (bomba temperatura)
+
+          dir1 = int(INT(message[31]));  //dir_feed
+          dir2 = int(INT(message[32]));  //dir_pH
+          dir3 = int(INT(message[33]));  //dir_temp
+          dir4 = int(INT(message[34]));  //dir_unload
+
+          return 1;
+    }
+    // Validate CALIBRATE
+    else if ( message[0]  == 'c' )
+          return 1;
+
+    //Validete umbral actuador temp: u2t003e
+    else if ( message[0] == 'u' && message[1] == '2' &&
+              message[2] == 't' && message[6] == 'e'
+            )
+          return 1;
+
+    // NOT VALIDATE
+    else  return 0;
+}
+
+
+//function for transform numbers to string format of message
+String format_message(int var, char type) {
+  //reset to svar string
+  svar = "";
+  if (type != 'm') {
+    if      (var < 10)   svar = "00" + String(var);
+    else if (var < 100)  svar =  "0" + String(var);
+    else                 svar = String(var);
+  }
+  else {
+    if      (var < 10)   svar = "000" + String(var);
+    else if (var < 100)  svar =  "00" + String(var);
+    else if (var < 1000) svar =   "0" + String(var);
+    else                 svar = String(var);
+  }
+
+  return svar;
+}
+
+
+void daqmx() {
+  //data adquisition measures
+  Byte0 = Temp_;
+  Byte1 = Iph;//Temp1;
+  Byte2 = Iod;//Temp2;
+  //Byte3 = Iph;
+  //Byte4 = 0;//Iod;
+  //Byte5 = 0;//Itemp1;
+  //Byte6 = 0;//Itemp2;
+  //Byte7 = 0;//flujo;
+
+  dtostrf(Byte0, 7, 2, cByte0);
+  dtostrf(Byte1, 7, 2, cByte1);
+  dtostrf(Byte2, 7, 2, cByte2);
+  //dtostrf(Byte3, 7, 2, cByte3);
+  //dtostrf(Byte4, 7, 2, cByte4);
+  //dtostrf(Byte5, 7, 2, cByte5);
+  //dtostrf(Byte6, 7, 2, cByte6);
+  //dtostrf(Byte7, 7, 2, cByte7);
+
+  Serial.print(cByte0);  Serial.print("\t");
+  Serial.print(cByte1);  Serial.print("\t");
+  Serial.print(cByte2);  Serial.print("\t");
+  //Serial.print(cByte3);  Serial.print("\t");
+  //Serial.print(cByte4);  Serial.print("\t");
+  //Serial.print(cByte5);  Serial.print("\t");
+  //Serial.print(cByte6);  Serial.print("\t");
+  //Serial.print(cByte7);  Serial.print("\t");
+
+  Serial.print(message.substring(0,34));     Serial.print("\t");
+  Serial.print(new_write.substring(0,31));   Serial.print("\t");
+  Serial.print(format_message(u_ph,'x'));    Serial.print("\t");
+  Serial.print(String(u_ph));                Serial.print("\t");
+  Serial.println(String(myph_set));
+
+  return;
+}
+
+
+
+//Re-transmition commands to slave micro controller
+void broadcast_setpoint() {
+  new_write = "";
+  new_write = ph_select + format_message(u_ph,'x') + "f" + format_message(myfeed_set,'x') + format_message(myunload_set,'x') + "m" + format_message(mymix_set,'m') + "t" + temp_select + format_message(u_temp,'x') + "r" + rst1 + rst2 + rst3 + rst4 + rst5 + dir1 + dir2 + dir3 + dir4 + "\n"; //+  String(dir2) +  String(dir3);
+  i2c_send_command(new_write, 2); //va hacia uc_slave
+
+  return;
 }
 
 
@@ -271,92 +375,10 @@ void actuador_umbral(){
   return;
 }
 
-//function for transform numbers to string format of message
-String format_message(int var) {
-  //reset to svar string
-  svar = "";
-  if      (var < 10)   svar = "000" + String(var);
-  else if (var < 100)  svar =  "00" + String(var);
-  else if (var < 1000) svar =   "0" + String(var);
-  else                 svar = String(var);
-
-  return svar;
-}
-
-
-void tx_reply(){
-  //tx of measures
-  Serial.print(cByte0);  Serial.print("\t");
-  Serial.print(cByte1);  Serial.print("\t");
-  Serial.print(cByte2);  Serial.print("\t");
-  Serial.print(cByte3);  Serial.print("\t");
-  Serial.print(cByte4);  Serial.print("\t");
-  Serial.print(cByte5);  Serial.print("\t");
-  Serial.print(cByte6);  Serial.print("\t");
-  Serial.print(cByte7);  Serial.print("\t");
-//nuevo
-  Serial.println(new_write);    // Serial.print("\t");
-  //Serial.print(new_write_w);  Serial.print("\t");
-  //Serial.println(message);
-  //Serial.print("\n");
-}
-
-void daqmx() {
-  //data adquisition measures
-  Byte0 = Temp_;
-  Byte1 = 0;//Temp1;
-  Byte2 = 0;//Temp2;
-  Byte3 = 0;//Iph;
-  Byte4 = 0;//Iod;
-  Byte5 = 0;//Itemp1;
-  Byte6 = 0;//Itemp2;
-  Byte7 = 0;//flujo;
-
-  dtostrf(Byte0, 7, 2, cByte0);
-  dtostrf(Byte1, 7, 2, cByte1);
-  dtostrf(Byte2, 7, 2, cByte2);
-  dtostrf(Byte3, 7, 2, cByte3);
-  dtostrf(Byte4, 7, 2, cByte4);
-  dtostrf(Byte5, 7, 2, cByte5);
-  dtostrf(Byte6, 7, 2, cByte6);
-  dtostrf(Byte7, 7, 2, cByte7);
-  dtostrf(Byte8, 7, 2, cByte8);
-
-  tx_reply();
-  return;
-}
-
-//Re-transmition commands to slave micro controller
-void broadcast_setpoint(uint8_t select) {
-  switch (select) {
-    case 0: //only re-tx and update uset's.
-      //se actualiza medicion de temperatura para enviarla a uc_slave
-      new_write = "";
-      //new_write = new_write_w;
-      //new_write = new_write_w.substring(0,23) + "t" + String(Temp_) + "\n";
-      //new_write = new_write_w.substring(0,31) + "\n";
-      new_write =  'w' + ph_select + format_message(u_ph) + 'f' + format_message(myfeed_set) + 'u' + format_message(myunload_set) + 'm' + format_message(mymix_set) + 't' + temp_select + format_message(u_temp) + 'r';// + new_write_w.substring(14);// +  String(dir2) +  String(dir3);
-      i2c_send_command(new_write, 2); //va hacia uc_slave
-      break;
-
-    case 1: //update command and re-tx.
-      new_write_w  = "";
-      //new_write_w  = message.substring(0,23) + "t" + String(Temp_) + "\n";  //message;// + "\n";
-      //new_write_w  = message.substring(0,31) + "\n";
-      new_write_w = 'w' + ph_select + format_message(u_ph) + 'f' + format_message(myfeed_set) + 'u' + format_message(myunload_set) + 'm' + format_message(mymix_set) + 't' + temp_select + format_message(u_temp) + 'r';// + new_write_w.substring(14);// +  String(dir2) +  String(dir3);
-      i2c_send_command(new_write_w, 2);
-      break;
-
-    default:
-      break;
-  }
-  return;
-}
-
 
 //Control temperatura para agua fria y caliente
-void control_temp(int rst3) {
-  if (rst3 == 0) {
+void control_temp() {
+  if (rst5 == 0) {
     //touch my delta temp
     dTemp = mytemp_set - Temp_;
 
@@ -389,84 +411,77 @@ void control_temp(int rst3) {
     else if ( dTemp <= Gap_temp8 ) u_temp = 145;
     else if ( dTemp  > Gap_temp9 ) u_temp = SPEED_MAX;
   }
+
   else {
-    temp_select = "a";
+    temp_select = "n";
     //el sistema se deja stanby
     digitalWrite(AGUA_CALIENTE, HIGH);
     digitalWrite(AGUA_FRIA, HIGH);
   }
 
   u_temp_save = int(u_temp);
-
-  //for debug
-  /*
-  Serial.println("mytemp_set:  " + String(mytemp_set));
-  Serial.println("Temp_:       " + String(Temp_));
-  Serial.println("dTemp :      " + String(dTemp));
-  Serial.println("u_temp_save: " + String(u_temp_save));
-  Serial.println("uset_temp:   " + String(uset_temp));
-  Serial.println("\n\n");
-  */
   return;
 }
 
 
 void control_ph() {
-  //for debug //myphset = 7.0; //touch my delta ph
-  dpH = myph_set - pH;
+  if (rst3 == 0) {
+    //for debug //myphset = 7.0; //touch my delta ph
+    dpH = myph_set - pH;
 
-  // Escenario en que se debe aplicar acido.
-  if ( dpH > 0.0 ) {
-    if ( dpH <= Gap_pH_0 ) //5% ó OFF según sí el 5% de umbral_a sea < 1
-      u_ph = 0.05 * umbral_b;
-    else if ( dpH <= Gap_pH_1 )
-      u_ph = 0.1 * umbral_b;  //10%
-    else if ( dpH <= Gap_pH_2 )
-      u_ph = 0.2 * umbral_b;  //20%
-    else if ( dpH <= Gap_pH_3 )
-      u_ph = 0.3 * umbral_b;  //30%
-    else if ( dpH <= Gap_pH_4 )
-      u_ph = 0.5 * umbral_b; //50%
-    else if ( dpH <= Gap_pH_5 )
-      u_ph = 0.75 * umbral_b;//75%
-    else if ( dpH > Gap_pH_5 )
-      u_ph = umbral_b;       //100%
+    if (myph_set >= 7) dpH = 3;
+    else dpH = -1;
 
-    ph_select = "b";  //=> Acido
+    // Escenario en que se debe aplicar acido.
+    if ( dpH > 0.0 ) {
+      if ( dpH <= Gap_pH_0 ) //5% ó OFF según sí el 5% de umbral_a sea < 1
+        u_ph = 0.05 * umbral_b;
+      else if ( dpH <= Gap_pH_1 )
+        u_ph = 0.1 * umbral_b;  //10%
+      else if ( dpH <= Gap_pH_2 )
+        u_ph = 0.2 * umbral_b;  //20%
+      else if ( dpH <= Gap_pH_3 )
+        u_ph = 0.3 * umbral_b;  //30%
+      else if ( dpH <= Gap_pH_4 )
+        u_ph = 0.5 * umbral_b; //50%
+      else if ( dpH <= Gap_pH_5 )
+        u_ph = 0.75 * umbral_b;//75%
+      else if ( dpH > Gap_pH_5 )
+        u_ph = umbral_b;       //100%
+
+      ph_select = "b";  //=> Acido
+      }
+    // Escenario en que se debe aplicar base.
+    else if ( dpH <= 0.0 ) {
+      if ( dpH >= -Gap_pH_0 )
+      u_ph = 0.05 * umbral_a;   //5%
+      else if ( dpH >= -Gap_pH_1 )
+        u_ph = 0.1 * umbral_a;  //10%
+      else if ( dpH >= -Gap_pH_2 )
+        u_ph = 0.2 * umbral_a;  //20%
+      else if ( dpH >= -Gap_pH_3 )
+        u_ph = 0.3 * umbral_a;  //30%
+      else if ( dpH >= -Gap_pH_4 )
+        u_ph = 0.5 * umbral_a;  //50%
+      else if ( dpH >= -Gap_pH_5 )
+        u_ph = 0.75 * umbral_a; //75%
+      else if ( dpH < -Gap_pH_5 )
+        u_ph = umbral_a;        //100%
+
+      ph_select = "a";  //=> Básico
+    }
+    else {
+      u_ph = 0;
+      ph_select = "N";  //no hacer nada
     }
 
-  // Escenario en que se debe aplicar base.
-  else if ( dpH <= 0.0 ) {
-    if ( dpH >= -Gap_pH_0 )
-    u_ph = 0.05 * umbral_a;   //5%
-    else if ( dpH >= -Gap_pH_1 )
-      u_ph = 0.1 * umbral_a;  //10%
-    else if ( dpH >= -Gap_pH_2 )
-      u_ph = 0.2 * umbral_a;  //20%
-    else if ( dpH >= -Gap_pH_3 )
-      u_ph = 0.3 * umbral_a;  //30%
-    else if ( dpH >= -Gap_pH_4 )
-      u_ph = 0.5 * umbral_a;  //50%
-    else if ( dpH >= -Gap_pH_5 )
-      u_ph = 0.75 * umbral_a; //75%
-    else if ( dpH < -Gap_pH_5 )
-      u_ph = umbral_a;        //100%
-
-    ph_select = "a";  //=> Básico
+    u_ph = u_ph;
   }
+  else u_ph = 0;
 
-  else {
-    u_ph = 0;
-    ph_select = "N";  //no hacer nada
-  }
-
-  u_ph = (int) u_ph;
   return;
 }
 
-
-//Esquema I2C Concha y Toro:
-//TRAMA-Proceso  : por hacer (5 julio 2020)
 
 void clean_strings() {
   //clean strings
@@ -474,43 +489,15 @@ void clean_strings() {
   message   = "";
 }
 
-// Validate and crumble SETPOINT from serial in raspberry (5 julio 2020)
-int validate() {
-    //message format write values from raspberry-pi(serial): wph07.0f017u010m0001t030r111111d000111
-    if ( message[0] == 'w' ) {
-            myph_set     = message.substring(3,7).toFloat();
-            myfeed_set   = message.substring(8,11).toInt();
-            myunload_set = message.substring(12,15).toInt();
-            mymix_set    = message.substring(16,20).toInt();
-            mytemp_set   = message.substring(21,24).toFloat();
+//wph07.2f017u010m0001t030r11110d000
 
-            rst1 = int(INT(message[25]));  //rst_feed    (bomba1)
-            rst2 = int(INT(message[26]));  //rst_mix     (mezclador)
-            rst3 = int(INT(message[27]));  //rst_pH      (bombas pH)
-            rst4 = int(INT(message[28]));  //rest_unload (bomba2)
-            rst5 = int(INT(message[29]));  //rst_temp    (bomba temperatura)
 
-            dir1 = int(INT(message[32]));
-            dir2 = int(INT(message[33]));
-            dir3 = int(INT(message[34]));
-
-            return 1;
-    }
-    // Validate CALIBRATE
-    else if ( message[0]  == 'c' )
-            return 1;
-
-    //Validete umbral actuador temp: u2t003e
-    else if ( message[0] == 'u' && message[1] == '2' &&
-              message[2] == 't' && message[6] == 'e'
-            )
-          return 1;
-
-   // Validate READING
-    else if ( message[0] == 'r' )
-          return 1;
-
-    // NOT VALIDATE
-    else
-          return 0;
+/*
+void lcd_i2c_grove() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  //lcd.print(new_write);
+  //String test = "x100f100100m1500tx100r11111111\n";
+  //lcd.print(test[10]);
 }
+*/

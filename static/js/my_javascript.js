@@ -25,14 +25,15 @@ $(document).ready(function() {
                              ph:     $('#ph').val(),
                        descarga:     $('#descargar').val(),
                     temperatura:     $('#temperatura').val(),
-                      alimentar_rst: $('#alimentar_rst').is(':checked'),  //rst1
-                        mezclar_rst: $('#mezclar_rst').is(':checked'),    //rst2
-                             ph_rst: $('#ph_rst').is(':checked'),         //rst3
-                       descarga_rst: $('#descargar_rst').is(':checked'),  //rst4
-                    temperatura_rst: $('#temperatura_rst').is(':checked'),//rst5
-                      alimentar_dir: $('#alimentar_dir').is(':checked'),  //dir1
-                             ph_dir: $('#ph_dir').is(':checked'),         //dir2
-                    temperatura_dir: $('#temperatura_dir').is(':checked') //dir3
+                      alimentar_rst: $('#alimentar_rst').is(':checked'),   //rst1
+                        mezclar_rst: $('#mezclar_rst').is(':checked'),     //rst2
+                             ph_rst: $('#ph_rst').is(':checked'),          //rst3
+                       descarga_rst: $('#descargar_rst').is(':checked'),   //rst4
+                    temperatura_rst: $('#temperatura_rst').is(':checked'), //rst5
+                      alimentar_dir: $('#alimentar_dir').is(':checked'),   //dir1
+                             ph_dir: $('#ph_dir').is(':checked'),          //dir2
+                    temperatura_dir: $('#temperatura_dir').is(':checked'), //dir3
+                       descarga_dir: $('#descargar_dir').is(':checked')     //dir4
                      });
 
         //para depurar
@@ -52,6 +53,7 @@ $(document).ready(function() {
         console.log($('#alimentar_dir').is(':checked'));
         console.log($('#ph_dir').is(':checked'));
         console.log($('#temperatura_dir').is(':checked'));
+        console.log($('#descargar_dir').is(':checked'));
 
 
         socket.emit('producto',
@@ -84,6 +86,7 @@ $(document).ready(function() {
         document.getElementById('alimentar_dir').checked   = msg.set[10];
         document.getElementById('ph_dir').checked          = msg.set[11];
         document.getElementById('temperatura_dir').checked = msg.set[12];
+        document.getElementById('descargar_dir').checked    = msg.set[13];
 
         //para depurar
         console.log('Checkeds Recibidos');
@@ -95,6 +98,7 @@ $(document).ready(function() {
         console.log($('#alimentar_dir').is(':checked'));
         console.log($('#ph_dir').is(':checked'));
         console.log($('#temperatura_dir').is(':checked'));
+        console.log($('#descargar_dir').is(':checked'));
     });
 
 

@@ -1,235 +1,116 @@
-from multiprocessing import Process, Queue, Event
-import zmq, time, datetime, serial, sys, logging
+import zmq, time, datetime, serial, sys, logging, ports
 
 logging.basicConfig(filename='/home/pi/vprocess5/log/myserial.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
-
 DIR="/home/pi/vprocess5/"
-
 #5556: for listen data
 #5557: for publisher data
 
-tau_zmq_connect     = 0.5  #0.3=300 [ms]
-tau_zmq_while_write = 0.25 #0.5=500 [ms]
-tau_zmq_while_read  = 0.5#0.25 #0.4#0.25   # 0.5=500 [ms]
-tau_serial          = 0.01 #0.08   #0.02  #  0.01=10 [ms]
+tau_serial = 0.35 #[ms]
+save_setpoint = "wph11.1f111u111m1111t111r111111d111"
 
 
-save_setpoint1 = 'wf000u000t000r111e0f0.0'
-setpoint_reply_uc = save_setpoint1
+PORT = ports.serial_ports()
+ser = serial.Serial(port=PORT, timeout = 1, baudrate = 9600)
+logging.info("Conexion Serial al PORT: %s", PORT)
 
-
-##### Queue data: q1 is for put data to   serial port #####
-##### Queue data: q2 is for get data from serial port #####
-def listen(q1):
-    #####Listen part: escribe en el uc las acciones: w, etc.
-    port_sub = "5556"
-    context_sub = zmq.Context()
-    socket_sub = context_sub.socket(zmq.SUB)
-    socket_sub.connect ("tcp://localhost:%s" % port_sub)
-    topicfilter = "w"
-    socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
-    time.sleep(tau_zmq_connect)
-
-    string = ['','','','']
-    while True:
-        try:
-            string= socket_sub.recv(flags=zmq.NOBLOCK).split()
-            q1.put(string[1])
-
-        except zmq.Again:
-            pass
-
-        time.sleep(tau_zmq_while_write)
-
-    return True
-
-
-def speak(q1,q2):
-    #####Publisher part: publica las lecturas obtenidas por serial.
-    port_pub = "5557"
-    context_pub = zmq.Context()
-    socket_pub = context_pub.socket(zmq.PUB)
-    socket_pub.bind("tcp://*:%s" % port_pub)
-    topic   = 'w'#'w'
-    time.sleep(tau_zmq_connect)
-
-    a,b = 4,1
-
-    while True:
-        #a = time.time()
-        #if (b-a) > 3.0: # 3.0 <=> 3 segundos!
-        #    q1.put("read")
-        #    b = time.time()
-
-        q1.put("read")  ####probando
-        if not q2.empty():
-            data = q2.get()
-            try:
-                socket_pub.send_string("%s %s" % (topic, data))
-
-            except:
-                logging.info("================Exception in speak function by reset in micro-controller===========================")
-
-        time.sleep(tau_zmq_while_read) #Tiempo de muestreo menor para todas las aplicaciones que recogen datos por ZMQ.
-
-    return True
 
 def set_dtr():
-    global save_setpoint1
+    global ser
+    ser.close()
+    PORT = ports.serial_ports()
+    ser = serial.Serial(port=PORT, timeout = 1, baudrate = 9600)
+    logging.info("Conexion Serial al PORT: %s", PORT)
 
     try:
-        ser = serial.Serial(port='/dev/ttyUSB0', timeout = 1, baudrate = 9600)
         ser.setDTR(True)
         time.sleep(1)
         ser.setDTR(False)
         time.sleep(1)
         logging.info("======================================================Se ejecuto SET_DTR()======================================")
 
-        logging.info("===================================================== Send last setpoint's post SET_DTR() ======================")
-        ser.write(save_setpoint1 + '\n')
-        result = ser.readline().split()
-        logging.info("===================================================== save_setpoint1 READY =====================================")
-
     except:
         logging.info("---------------------------------------------------- Fallo Ejecucion set_dtr() ---------------------------------")
 
-def rs232(q1,q2):
-    global save_setpoint1
-    global setpoint_reply_uc
+
+
+
+def rs232():
+    global save_setpoint
+    #####Listen part: recibe los comandos desde website/app.py para escribir en el uc las acciones: w, etc.
+    port_sub = "5556"
+    context_sub = zmq.Context()
+    socket_sub = context_sub.socket(zmq.SUB)
+    socket_sub.connect ("tcp://localhost:%s" % port_sub)
+    topicfilter = "w"
+    socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
+
+    #####Publisher part: publica las mediciones de sensores obtenidas por serial.
+    port_pub = "5557"
+    context_pub = zmq.Context()
+    socket_pub = context_pub.socket(zmq.PUB)
+    socket_pub.bind("tcp://*:%s" % port_pub)
+    topic   = 'w'
+
 
     flag = False
     while not flag:
         try:
-            logging.info("---------------------------Try Open SerialPort-USB------------------------------------------------------")
-            ser = serial.Serial(port='/dev/ttyUSB0', timeout = 1, baudrate=9600)
-
-            #necesario para setear correctamente el puerto serial
-            ser.setDTR(True)
-            time.sleep(1)
-            ser.setDTR(False)
-            time.sleep(1)
-            logging.info("--------------------------------DTR SET READY----------------------------------------------------------")
+            logging.info("--------------------------- Try Open SerialPort-USB ------------------------------------------------------")
+            set_dtr()
             logging.info("Post DTR SET READY: flag = %s", flag)
 
             if flag:
-                ser.write(save_setpoint1 + '\n')
+                ser.write(save_setpoint + '\n')
                 result = ser.readline().split()
-                logging.info("Primer envio de comando save_setpoint1: %s ",  save_setpoint1)
+                logging.info("Primer envio de comando save_setpoint: %s ",  save_setpoint)
 
             elif not flag:
-                logging.info("Conexion Serial Re-establecida")
-                logging.info("Reenviando ultimo SETPOINT %s", save_setpoint1)
-                ser.write(save_setpoint1 + '\n')
+                logging.info("!!!...Serial communication restart...!!!")
+                logging.info("Reenviando ultimo SETPOINT %s", save_setpoint)
+                ser.write(save_setpoint + '\n')
                 result = ser.readline().split()
-                logging.info("not flag last command: myserial_w_reply_uc: %s ", result)
+                logging.info("not flag: last command: myserial_w_reply_uc: %s ", result)
 
-            flag = ser.is_open
+            try:
+                flag = ser.is_open
+
+            except:
+                logging.info("*********** No se pudo consultar estado de puerto serial  ***********")
 
             if flag:
-                logging.info('CONEXION SERIAL EXITOSA, flag= %s', flag)
+                logging.info('CONEXION SERIAL EXITOSA, entramos al While de lectura y escritura, flag= %s', flag)
+
 
             while ser.is_open:
                 try:
-                    if not q1.empty():
-                        action = q1.get()
+                    #se consultan cambios de setpoint's
+                    try:
+                        action = socket_sub.recv(flags=zmq.NOBLOCK).split()[1]
+                        if action != "":
+                            save_setpoint = action
+                            logging.info("****** Se recibe nuevo setpoint desde app.py: %s .... se actualiza save_setpoint: %s ******", action, save_setpoint)
+                    #de no haberlos se continua enviando el ultimo setpoint
+                    except zmq.Again:
+                        action = save_setpoint
+                        logging.info("____________ zmq.Again except ____________")
 
-                        #Action for read measure from serial port
-                        if action == "read":
-                            try:
-                                if ser.is_open:
-                                    logging.info("myserial_r_action_to_uc: %s ", action)
-                                    ser.write('r' + '\n')
-                                    SERIAL_DATA = ser.readline()
+                    #escribiendo y leyendo al uc_sensores:
+                    logging.info("Enviando al uc_sensores: %s  ", action)
+                    ser.write(action + '\n')
+                    SERIAL_DATA = ser.readline().split()
 
-                                    #Prueba para eliminar mediciones erroneas.
-                                    if SERIAL_DATA != "" and len(SERIAL_DATA) >= 50 and len(SERIAL_DATA) <= 94:
-                                        logging.info("myserial_r_reply_uc: %s", SERIAL_DATA)
-                                        q2.put(SERIAL_DATA)
-                                        #try:
-                                        #    f = open(DIR + "SERIAL_DATA_BUENO.txt", "a+")
-                                        #    f.write(str(SERIAL_DATA) + "..." + str(len(SERIAL_DATA)) + "..." + time.strftime("Hora__%H__%M__%S") + "\n")
-                                        #    f.close
-                                        #except:
-                                        #    pass
+                    if len(SERIAL_DATA) > 2:
+                        #enviamos la data serial a speaker para su publicacion por zmq en el puerto 5557
+                        socket_pub.send_string("%s %s" % (topic, SERIAL_DATA))
+                        logging.info("********* Se Recojen mediciones del UC_SENSORES: %s *******\n\n", SERIAL_DATA)
 
-                                    else:
-                                        try:
-                                            pass
-                                    #        f = open(DIR + "SERIAL_DATA_MALO.txt", "a+")
-                                    #        f.write(str(SERIAL_DATA) + "..." + str(len(SERIAL_DATA)) + "..." + time.strftime("Hora__%H__%M__%S") + "\n")
-                                    #       f.close
-                                        except:
-                                            pass
-
-                                        logging.info("myserial_r_reply_uc_MALOOOOO: %s", SERIAL_DATA)
-
-                                    try:
-                                        temp = SERIAL_DATA.split()
-                                        temp = "".join(map(str, temp[8:]))
-
-                                        if temp != "":
-                                            setpoint_reply_uc = temp
-                                            #logging.info("SETPOINT_REPLY_UC: %s", setpoint_reply_uc[0:23])
-
-                                            if setpoint_reply_uc[0:23] == save_setpoint1:
-                                                logging.info("IGUALES:    (save_setpoint1, setpoint_reply_uc) = (%s,%s) ", save_setpoint1, setpoint_reply_uc)
-
-                                            elif setpoint_reply_uc != save_setpoint1:
-                                                #logging.info("DIFERENTES: (save_setpoint1, setpoint_reply_uc) = (%s,%s) ", save_setpoint1, setpoint_reply_uc)
-                                                #logging.info("URGENTE: REENVIAR SETPOINT!!!")
-
-                                                #logging.info("REENVIANDO SETPOINT A UC _ PERDIDA: %s ", save_setpoint1)
-                                                ser.write(save_setpoint1 + '\n')
-                                                result = ser.readline().split()
-                                                #logging.info("RESPUESTA UC A PERDIDA DE SETPOINT: %s ", result)
-
-
-                                    except:
-                                        logging("NO SE PUDO HACER SPLIT")
-
-
-                                else:
-                                    ser.open()
-                                    logging.info("******************************* Se aplica ser.open() a puerto serial !!! *******************************")
-
-                            except:
-                                logging.error("no se pudo leer SERIAL_DATA del uc")
-                                ser.close()
-                                flag = False
-
-                        #Action for write command of setpont + remontaje (29-09-19) to serial port
-                        else:
-                            try:
-                                #escribiendo al uc_master
-                                logging.info("myserial_w_action_to_uc: %s ", action)
-                                ser.write(action + '\n')
-
-                                #leyendo la respuesta del uc_master al comando "action" anterior
-                                result = ser.readline().split()
-                                logging.info("myserial_w_reply_uc: %s ", result)
-
-                                #nuevo
-                                if action[0] == 'w':
-                                    save_setpoint1 = action
-                                    logging.info("************* Se actualizan save_setpoint1 (write setpoint to UC): %s   *************", save_setpoint1)
-
-
-                            except:
-                                logging.info("no se pudo escribir al uc")
-                                #save_setpoint1 = action
-                                logging.info("the last setpoint save")
-                                #ser.close()
-                                #flag = False
-
-                    elif q1.empty():
-                        #logging.info("ELIF: q1.empty()=VACIO, se espera tau_serial para que lleguen datos para enviar al uc")
-                        time.sleep(tau_serial)
-
+                    else:
+                        logging.info("********* Sin respuesta correcta SERIAL_DATA: %s *******\n\n", SERIAL_DATA)
 
 
                 except:
-                    print "se entro al while pero no se pudo revisar la cola"
-                    logging.info("se entro al while pero no se pudo revisar la cola")
+                    logging.info("no se pudo escribir al uc")
+
 
                 time.sleep(tau_serial)
 
@@ -240,23 +121,14 @@ def rs232(q1,q2):
             time.sleep(2)
             set_dtr() #esta sobrando esto al parecer.
 
+        time.sleep(tau_serial)
+
     logging.info("Fin de myserial.py")
     return True
 
 
 def main():
-    q1 = Queue()
-    q2 = Queue()
-
-    p0 = Process(target=rs232, args=(q1,q2))  #aca se conjugan los dos de abajo
-    p0.start()
-
-    p1 = Process(target=listen, args=(q1,))   #aca se escucha zmq y se escribe en el serial
-    p1.start()
-
-    p2 = Process(target=speak, args=(q1, q2)) #aca se lee el serial y se publica por zmq
-    p2.start()
-
+    rs232()
 
 
 if __name__ == "__main__":

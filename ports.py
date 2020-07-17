@@ -29,7 +29,7 @@ def serial_ports():
             result.append(port)
         except (OSError, serial.SerialException):
             pass
-    return result
+    return str(result[0])
 
 
 if __name__ == '__main__':
