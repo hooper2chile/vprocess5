@@ -2,11 +2,13 @@
 #include "Arduino.h"
 #include "Wire.h"
 #include "SoftwareSerial.h"
-#include "rgb_lcd.h"
+//#include "rgb_lcd.h"
 
 SoftwareSerial mySerial(2, 3);  //RX(Digital2), TX(Digital3) Software serial port.
+SoftwareSerial mixer(4, 5); //for control in mezclador
 
-rgb_lcd lcd;
+
+//rgb_lcd lcd;
 
 const int colorR = 255;
 const int colorG = 0;
@@ -48,6 +50,7 @@ uint8_t rst1_save = 1;  uint8_t rst2_save = 1;  uint8_t rst3_save = 1;
 uint8_t dir1 = 1;  uint8_t dir2 = 1;  uint8_t dir3 = 1;
 
 uint8_t pump_enable = 0;
+uint8_t relay_temp = 1;
 
 float mytemp_set = 0;
 float mytemp_set_save = 0;
@@ -64,7 +67,7 @@ uint8_t u_temp_save = 0;
 int i = 0;
 int data = 0;
 int data_cero = 0;
-uint16_t s_rpm_save = 0;
+uint16_t s_rpm_save = 115;
 
 
 
@@ -93,9 +96,8 @@ void serialEvent() {
 
 
 void cooler(int rst1, int rst2, int rst3) {
-  if (rst1 == 0 || rst2 == 0 || rst3 == 0)
-	  digitalWrite(A3, LOW );
-  else    digitalWrite(A3, HIGH);
+  if (rst1 == 0 || rst2 == 0 || rst3 == 0) digitalWrite(A3, LOW );
+  else                                     digitalWrite(A3, HIGH);
 
 }
 
@@ -136,7 +138,12 @@ int validate_write() {
   if ( message[0] == 'n' || message[0] == 'a'|| message[0] == 'b' ) {
     //se "desmenuza" el command de setpoints
     mymix_setup = message.substring(12,16).toInt();
+    rst2 = message.substring(23,24).toInt();
+
+    relay_temp = message.substring(17,18).toInt();
+
     Serial.println("echo: " + message);
+
     return 1;
   }
 }
@@ -146,38 +153,38 @@ void Motor_set_RPM(int high, int low)
 {
   int checksum = (177 + high + low) & 0xff;
 
-  Serial.write(254);
+  mixer.write(254);
   delay(100);
-  Serial.write(177);
+  mixer.write(177);
   delay(100);
-  Serial.write(high);
+  mixer.write(high);
   delay(100);
-  Serial.write(low);
+  mixer.write(low);
   delay(100);
-  Serial.write(data_cero);
+  mixer.write(data_cero);
   delay(100);
-  Serial.write(checksum);
+  mixer.write(checksum);
 }
 //254 160 0 0 0 160       254 160 0 0 0 160     254 177 0 0 0 177       254 177 0 0 0 177      254 177 0 d 0 21      254 177
 void Motor_conectar()
 {
   delay(100);
-  Serial.write(254);
+  mixer.write(254);
   delay(100);
-  Serial.write(160);
+  mixer.write(160);
   delay(100);
   data = 0;
-  Serial.write(data);  // data = 0
+  mixer.write(data);  // data = 0
   delay(100);
-  Serial.write(data);
+  mixer.write(data);
   delay(100);
-  Serial.write(data);
+  mixer.write(data);
   delay(100);
-  Serial.write(160);
+  mixer.write(160);
 }
 
 void agitador(uint16_t s_rpm, uint8_t rst) {
-    if( !rst2 ) {
+    if( !rst ) {
       if ( s_rpm_save != s_rpm ) {
         s_rpm_save = s_rpm;
         int rpm_h = (s_rpm >> 8) & 0xff;
@@ -207,10 +214,11 @@ void agitador(uint16_t s_rpm, uint8_t rst) {
 }
 
 
-
+/*
 void lcd_i2c_grove() {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print(mymix_setup);
 
 }
+*/

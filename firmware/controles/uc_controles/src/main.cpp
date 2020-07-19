@@ -25,6 +25,7 @@ void setup() {
 
   Serial.begin(9600);
   mySerial.begin(9600);
+  mixer.begin(9600);
 
   message.reserve(65);
 
@@ -39,8 +40,8 @@ void setup() {
   mySerial.print(new_write);
 
 
-  lcd.begin(16, 2);
-  lcd.setRGB(colorR, colorG, colorB);
+  //lcd.begin(16, 2);
+  //lcd.setRGB(colorR, colorG, colorB);
 
   wdt_enable(WDTO_8S);
 }
@@ -49,10 +50,13 @@ void loop() {
   if ( stringComplete ) {
       if ( validate_write() ) {
 	      cooler(rst1, rst2, rst3);
-        lcd_i2c_grove();
-        //funcion para mezclador dragonlab
-        if (message[0] == 'n' || message[0] == 'a'|| message[0] == 'b') broadcast_setpoint(1);
-        else                                                            broadcast_setpoint(0);
+
+      //if (rst2 == 0)
+      agitador(mymix_setup, rst2);
+
+      //lcd_i2c_grove();
+      if (message[0] == 'n' || message[0] == 'a'|| message[0] == 'b') broadcast_setpoint(1);
+      else                                                            broadcast_setpoint(0);
 
       }
       else Serial.println("BAD command to uc_controles: " + message);
