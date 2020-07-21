@@ -32,7 +32,7 @@ def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
     connector.commit()
 
     #INSERCION DE LOS DATOS MEDIDOS, TABLA FULL CON TODA LA DATA, NULL es para el ID
-                                                                                                                                                                                        #cultivo            #tasa             #biomasa          #sustrato       #mezclador           #bomba1            #bomba2           #Temp_setpoint         #Temp_measure     #pH_setpoint      #pH_measure
+                                                                                                                                                                                                    #cultivo            #tasa             #biomasa       #sustrato       #mezclador           #bomba1             #bomba2          #Temp_setpoint     #Temp_measure     #pH_setpoint     #pH_measure
     try:
         c.execute("INSERT INTO PROCESO  VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (datetime.datetime.now().strftime("%Y-%m-%d"), datetime.datetime.now().strftime("%H:%M:%S"), ficha_producto[0], ficha_producto[1], ficha_producto[2], ficha_producto[3], ficha_producto[4], ficha_producto[10], ficha_producto[11], ficha_producto[9], real_data[1], ficha_producto[8], real_data[2] ))
 
@@ -106,13 +106,12 @@ def main():
     socket_sub1.setsockopt(zmq.SUBSCRIBE, topicfilter)
 
 
-    #####Listen measures - estructura para zmq real_data
+    #####Listen measures - estructura para zmq listen real_data (measures from myserial.py)
     port_sub2 = "5557"
     context_sub2 = zmq.Context()
     socket_sub2 = context_sub2.socket(zmq.SUB)
     socket_sub2.connect ("tcp://localhost:%s" % port_sub2)
     socket_sub2.setsockopt(zmq.SUBSCRIBE, topicfilter)
-    #espero y retorno valor
     ####################################################################################
 
     i = 0                      #Hora__%H_%M_%S__Fecha__%d-%m-%y
@@ -165,9 +164,15 @@ def main():
         i += 1
         while flag_database_local:
 
-            #ZMQ connection for download real_data
+            #ZMQ connection for download real_data (measures from myserial.py)
             try:
-                real_data = socket_sub2.recv(flags=zmq.NOBLOCK).split()
+                temporal = socket_sub2.recv(flags=zmq.NOBLOCK).split()
+                if temporal != "":
+                    real_data = temporal
+
+                f = open(DIR + "/real_data_measures_database_from_mysearial.txt","a+")
+                f.write(str(real_data) + "  " + str(len(real_data)) + "\n" )
+                f.close()
 
             except zmq.Again:
                 pass

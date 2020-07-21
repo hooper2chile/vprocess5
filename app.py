@@ -35,12 +35,14 @@ task = ["grabar", False]
 flag_database = False
 #            0   1   2    3   4    5 6 7 8 9 10 11 12 13
 #set_data = [10, 0, 7.0, 10, 25.0, 1,1,1,1,1,0, 0, 0, 0]  # increiblemente uno de estos hacia partir en activado el sistema de motores...
-set_data = [10,  1, 7.0, 10, 25,   1,1,1,1,1,0, 0, 0, 0]
+set_data = [10,  60, 7.0, 10, 25,   1,1,1,1,1,0, 0, 0, 0]
+#set_data[1] =: setpoint mix
 #set_data[8] =: rst2 (reset de bomba2)
 #set_data[9] =: rst3 (reset de bomba temperatura)
 #set_data[5] =: rst1 (reset de bomba1)
 #rm_sets[4]  =: (reset global de bomba remontaje)
 #rm_sets[5]  =: (reset local de bomba remontaje)
+
 
 ficha_producto = [0.0,0.0,0.0,0.0,0.0,"vacio_uchile","vacio_uchile",0,0.0,0,0,0,0] #ficha_producto[9]=set_data[4]:temparatura setpoint
 ficha_producto_save = ficha_producto                                  #ficha_producto[10] = set_data[0]: bomba1
@@ -202,8 +204,6 @@ def setpoints(dato):
                 #logging.info("no se pudo completar limpiar\n")
 
 
-
-
 N = None
 APIRest = None
 @socketio.on('my_json', namespace='/biocl')
@@ -278,7 +278,7 @@ def setpoints(dato):
     #guardo set_data en un archivo para depurar
     try:
         f = open(DIR + "/setpoints.txt","a+")
-        f.write( str(set_data) +  time.strftime("Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')              #agregar fecha y hora a este string
+        f.write( str(set_data) + "  " + time.strftime("Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')              #agregar fecha y hora a este string
         f.close()
 
     except:
@@ -566,6 +566,7 @@ def calibrar_u_temp(dato):
 #CONFIGURACION DE THREADS
 def background_thread1():
     measures = [0,0,0,0,0,0,0]
+    measures_save = measures
     save_set_data = [20,0,0,20,0,1,1,1,1,1,0,0,0]
 
     topic   = 'w'
@@ -594,6 +595,8 @@ def background_thread1():
 
     while True:
         global set_data, rm_sets, rm_save, ficha_producto, rm3, rm5
+
+        #desde aca se envian (publicadores) set_points para myserial.py y dato de ficha producto a database.py
         try:
             myList = ','.join(map(str, ficha_producto))
             #preparo la ficha_producto y la envio por ZMQ publicador del canal 5557 a la base de datos
@@ -602,46 +605,49 @@ def background_thread1():
             #preparo el setpoint y o mando por el ZMQ publicador del canal 5556 a myserial.py
             send_setpoint = communication.cook_setpoint(set_data,rm_sets)
             socket.send_string("%s %s" % (topic, send_setpoint))
-
-
             save_set_data = set_data
-            #las actualizaciones de abajo deben ir aqui para que aplique la sentencia "!=" en el envio de datos para ficha_producto hacia la Base de Datos
-            ficha_producto[9]  = save_set_data[4]*(1 - save_set_data[9])  #setpoint de temperatura
-            ficha_producto[10] = save_set_data[0]*(1 - save_set_data[5])  #bomba1
-            ficha_producto[11] = save_set_data[3]*(1 - save_set_data[8])  #bomba2
-            ficha_producto[4]  = save_set_data[1]*(1 - save_set_data[6])  #mezclador
-            ficha_producto[8]  = save_set_data[2]*(1 - save_set_data[7])  #setpoint pH
+
 
         except:
             #pass
             logging.info("\n ············· no se pudo enviar datos a los destinatarios ·············\n")
 
 
+        #ejecuto suscripcion al ZMQ de myserial.py, esto es las mediciones de variables fisicas (esta linea es un suscriptor al puerto 5557)
         try:
-            #####################################################################################
-            #ZMQ DAQmx download data from micro controller + acondicionamiento de variables
-            temp_ = socket_sub.recv().split() #se obtienen los datos publicados desde el ZMQ de myserial (esta linea es del suscriptor al puerto 5557)
-
-            measures[0] = temp_[1][2:7] #Temp_
-            measures[1] = 43#temp_[1]  #pH
-            measures[2] = 34#temp_[1]  #oD
-            measures[3] = 66#temp_[1]  #
-            measures[4] = 33#Iod
-            #measures[5] = temp_[1]  #
-            #measures[6] = temp_[1]  #Iph
-            #####################################################################################
-            logging.info("\n Se ejecuto Thread 1 emitiendo %s\n" % set_data)
-            logging.info("\n SE ACTUALIZARON LAS MEDICIONES y SETPOINTS \n")
-
+            temp_ = socket_sub.recv().split()
+            #temp_ = socket_sub.recv(flags=zmq.NOBLOCK).split() #por alguna razon al usar el objeto recv() con el flag NOBLOCK, todo el sistema de ZMQ deja de enviar datos hacia el uc, los motores dejan de funcionar.
+            #logging.info("\n Se ejecuto Thread 1 recibiendo %s\n" % measures)
 
         except zmq.Again:
-            #pass
             logging.info("\n NO SE ACTUALIZARON LAS MEDICIONES NI SETPOINTS \n")
+            pass
+
+        if temp_ != "" and len(temp_) >= 4:
+            measures[0] = temp_[1]  #Temp_
+            measures[1] = temp_[2]  #IpH
+            measures[2] = temp_[3]  #pH
+            #measures[3] = 66#temp_[1]  #
+            #measures[4] = 33#Iod
+            #measures[5] = temp_[1]  #
+            #measures[6] = temp_[1]  #Iph
+            measures_save = measures
+
+        else:
+            measures = measures_save
+
+        #las actualizaciones de abajo deben ir aqui para que aplique la sentencia "!=" en el envio de datos para ficha_producto hacia la Base de Datos
+        ficha_producto[9]  = save_set_data[4]*(1 - save_set_data[9])  #setpoint de temperatura
+        ficha_producto[10] = save_set_data[0]*(1 - save_set_data[5])  #bomba1
+        ficha_producto[11] = save_set_data[3]*(1 - save_set_data[8])  #bomba2
+        ficha_producto[4]  = save_set_data[1]*(1 - save_set_data[6])  #mezclador
+        ficha_producto[8]  = save_set_data[2]*(1 - save_set_data[7])  #setpoint pH
+
 
 
         #se termina de actualizar y se emiten las mediciones y setpoints para hacia clientes web.-
         socketio.emit('Medidas', {'data': measures, 'set': set_data}, namespace='/biocl')
-        socketio.sleep(0.03)
+        socketio.sleep(0.05)
 
 
 if __name__ == '__main__':

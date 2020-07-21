@@ -2,10 +2,10 @@
 #include "Arduino.h"
 #include <Wire.h>
 #include "Adafruit_ADS1015.h"
-Adafruit_ADS1115 ads1(0x49);
-
-//#include "rgb_lcd.h"
-//rgb_lcd lcd;
+Adafruit_ADS1115 ads1(0x48);  //en placa sensores el de arriba es 49(address esta conectado a vdd en el ads de arriba en la placa) y el de abajo es 48 (address conectado a nada)
+//Adafruit_ADS1115 ads1(0x49);
+#include "rgb_lcd.h"
+rgb_lcd lcd;
 
 const int colorR = 255;
 const int colorG = 0;
@@ -20,6 +20,17 @@ const int colorB = 0;
 #define SPEED_MIN 2.0
 #define SPEED_MAX 150     //[RPM]
 #define TEMP_MAX  60      //[ºC]
+
+//INA169 + ADS1115: Factores para normalizar mediciones.
+#define PGA1 0.125F
+#define PGA2 0.0625F
+const int VOLTAGE_REF  = 5;    // before: 5  // Reference voltage for analog read
+const int RS = 10;             // Shunt resistor value (in ohms)
+#define mA 1000.0
+#define K 1.0 / (10.0 * RS )
+#define alpha 0.35F
+//INA169 + ADS1115: Factores para normalizar mediciones.
+
 
 //#define REMONTAJE_PIN  A0 //bomba remontaje
 #define AGUA_FRIA      A1 //D10 = rele 1 (cable rojo)
@@ -101,8 +112,8 @@ float Iph = 0;
 float Iod = 0;
 
 //pH=:(m0,n0)
-float m0 = +0.864553;//+0.75;
-float n0 = -3.634006;//-3.5;
+float m0 = +0.75;//+0.864553;//+0.75;
+float n0 = -3.50;//-3.634006;//-3.5;
 
 //oD=:(m1,n1)
 float m1 = +6.02;
@@ -212,6 +223,16 @@ void calibrate_sensor() {
 }
 
 
+void hamilton_pH_sensor(){
+  //Iph = ads1.readADC_SingleEnded(0);
+  //Iph = alpha * (PGA1 * K ) * ads1.readADC_SingleEnded(0) + (1 - alpha) * Iph;
+  Iph = (PGA1 * K ) * ads1.readADC_SingleEnded(0);
+  pH = m0 * Iph + n0;
+  delay(200);
+}
+
+
+
 //for hardware serial
 void serialEvent() {
   while (Serial.available()) {
@@ -292,8 +313,8 @@ String format_message(int var, char type) {
 void daqmx() {
   //data adquisition measures
   Byte0 = Temp_;
-  Byte1 = Iph;//Temp1;
-  Byte2 = Iod;//Temp2;
+  Byte1 = Iph; //Iph vprocess5;
+  Byte2 = pH;  //pH vprocess5;
   //Byte3 = Iph;
   //Byte4 = 0;//Iod;
   //Byte5 = 0;//Itemp1;
@@ -318,11 +339,12 @@ void daqmx() {
   //Serial.print(cByte6);  Serial.print("\t");
   //Serial.print(cByte7);  Serial.print("\t");
 
-  Serial.print(message.substring(0,34));     Serial.print("\t");
+  //Serial.print(message.substring(0,34));     Serial.print("\t");
   Serial.print(new_write.substring(0,31));   Serial.print("\t");
-  Serial.print(format_message(u_ph,'x'));    Serial.print("\t");
-  Serial.print(String(u_ph));                Serial.print("\t");
-  Serial.println(String(myph_set));
+  //Serial.print(format_message(u_ph,'x'));    Serial.print("\t");
+  //Serial.print(String(u_ph));                Serial.print("\t");
+  //Serial.print(String(myph_set));
+  Serial.println("\n");
 
   return;
 }

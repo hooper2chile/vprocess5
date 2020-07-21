@@ -1,11 +1,12 @@
 import zmq, time, datetime, os
 
-tau_zmq_while_write = 0.01 #0.5=500 [ms]
-string = ""
+tau_zmq_while = 0.01 #0.5=500 [ms]
+string  = ""
+string2 = ""
+temporal = ""
 
 def main():
 
-    #####Listen part: recibe los comandos desde website/app.py para escribir en el uc las acciones: w, etc.
     port_sub = "5557" #'5556'
     context_sub = zmq.Context()
     socket_sub = context_sub.socket(zmq.SUB)
@@ -13,36 +14,39 @@ def main():
     topicfilter = "w"
     socket_sub.setsockopt(zmq.SUBSCRIBE, topicfilter)
 
-    global string
+    global string, string2, temporal
+    i,j = 0,0
+
     while 1:
         #os.system("clear")
         try:
             string = socket_sub.recv(flags=zmq.NOBLOCK).split()
 
         except zmq.Again:
+            i += 1
+            print "MALO numero: %s",i
             pass
 
 
-        if string != "" and len(string) > 2:
-            '''
-            a = string[1].split()
-            b = a[0]
-            c = b[2:7]
-            print float(c)
-            '''
-            try:
-                z = float( string[1].split()[0][2:7] )
+        if string != "" and len(string) >= 4:
+            temporal = string
+            print temporal[0]
+            print temporal[1]
+            print temporal[2]
+            print temporal[3]
+            #print temporal[4]
+            
+            j += 1
+            print "BUENO numero: %s",j
 
-            except:
-                pass
-                
-            print type(z)
-            print z
+            print "--- temporal ---"
+            print type(temporal)
+            print len(temporal)
+            print temporal
+
             print "\n\n\n"
 
-        time.sleep(tau_zmq_while_write)
-
-
+        time.sleep(tau_zmq_while)
 
 
 if __name__ == "__main__":

@@ -12,11 +12,14 @@ void setup() {
 
   Serial.begin(9600);
   Wire.begin(); //se inicia i2c master
+
   ads1.begin();
+
   //ads2.begin();
   //                                           ADS1015  ADS1115
   //                                           -------  -------
   ads1.setGain(GAIN_ONE);      // 1x gain   +/- 4.096V  1 bit = 2mV      0.125mV
+
   //ads2.setGain(GAIN_ONE);
   //ads.setGain(GAIN_TWO);     // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
@@ -54,6 +57,7 @@ void loop() {
           switch ( message[0] ) {
               case 'w':
                 rtds_sensors();
+                hamilton_pH_sensor();
                 control_ph();
                 control_temp();
                 daqmx();

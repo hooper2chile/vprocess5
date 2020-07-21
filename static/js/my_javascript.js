@@ -13,8 +13,8 @@ $(document).ready(function() {
     //Se escuchan las mediciones de ph, OD, Temp.
     socket.on('Medidas', function(msg) {
         $('#med1').text('Temp : ' + msg.data[0] + ' º[C]').html();
-        $('#med2').text('pH   : ' + msg.data[1] + ' º[C]').html();
-        $('#med3').text('oD   : ' + msg.data[2] + ' º[C]').html();
+        $('#med2').text('pH   : ' + msg.data[1] + '     ').html();
+        $('#med3').text('oD   : ' + msg.data[2] + '     ').html();
     });
 
     //se emiten los setpoints hacia el servidor

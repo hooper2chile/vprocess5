@@ -97,9 +97,10 @@ def rs232():
                     #escribiendo y leyendo al uc_sensores:
                     logging.info("Enviando al uc_sensores: %s  ", action)
                     ser.write(action + '\n')
-                    SERIAL_DATA = ser.readline().split()
+                    #SERIAL_DATA = ser.readline().split()
+                    SERIAL_DATA = ser.readline()
 
-                    if len(SERIAL_DATA) > 2:
+                    if SERIAL_DATA != "":
                         #enviamos la data serial a speaker para su publicacion por zmq en el puerto 5557
                         socket_pub.send_string("%s %s" % (topic, SERIAL_DATA))
                         logging.info("********* Se Recojen mediciones del UC_SENSORES: %s *******\n\n", SERIAL_DATA)
