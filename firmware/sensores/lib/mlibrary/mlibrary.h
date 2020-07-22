@@ -58,6 +58,7 @@ const int RS = 10;             // Shunt resistor value (in ohms)
 
 String message     = "";
 String new_write   = "b000f000000m0000tn000r111111111\n"; //"x100f100100m1500tx100r11111111\n";
+String temp_calibrar = "nada";
 
 boolean stringComplete = false;  // whether the string is complete
 
@@ -101,7 +102,6 @@ float dTemp  = 0;
 float Temp_  = 0;
 int u_temp = 0;
 
-//variable for control pH
 String ph_select   = "n";
 String temp_select = "n";
 String svar = "";
@@ -111,9 +111,12 @@ float dpH  = 0;
 float Iph = 0;
 float Iod = 0;
 
+float m = 0;
+float n = 0;
+
 //pH=:(m0,n0)
-float m0 = +0.75;//+0.864553;//+0.75;
-float n0 = -3.50;//-3.634006;//-3.5;
+float m0 = +0.87;//+0.864553;//+0.75;
+float n0 = -3.39;//-3.634006;//-3.5;
 
 //oD=:(m1,n1)
 float m1 = +6.02;
@@ -139,34 +142,38 @@ byte i = 0;                      //counter used for RTD_data array.
 int time_ = 600;                 //used to change the delay needed depending on the command sent to the EZO Class RTD Circuit.
 
 
-void rtd1_sensor() {
-  Wire.beginTransmission(rtd1);                                                 //call the circuit by its ID number.
-  Wire.write('r');
-  Wire.endTransmission();                                                       //end the I2C data transmission.
+void calibrate_sensor_atlas() {
+  // comunicacion a sensor rtd2
+  Wire.beginTransmission(rtd2);       //FH, OJO: se esta midiendo con la rtd2!
+  //temp_calibrar = "cal," + temp_calibrar;
+  //Wire.write(temp_calibrar.c_str());
+  Wire.write("cal,19");
+  Wire.endTransmission();                                                              //end the I2C data transmission.
 
-  if (strcmp('r', "sleep") != 0) {                                              //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
-    delay(time_);                                                               //wait the correct amount of time for the circuit to complete its instruction.
-    Wire.requestFrom(rtd1, 20, 1);                                              //call the circuit and request 20 bytes (this may be more than we need)
-    code = Wire.read();                                                         //the first byte is the response code, we read this separately.
+  if ( strcmp("cal,19", "sleep" ) != 0) {
+    delay(time_);                                                                     //wait the correct amount of time for the circuit to complete its instruction.
+    Wire.requestFrom(rtd2, 20, 1);     //FH, OJO: se esta midiendo con la rtd2!       //call the circuit and request 20 bytes (this may be more than we need)
+    code = Wire.read();                                                               //the first byte is the response code, we read this separately.
 
-    while (Wire.available()) {
-      in_char = Wire.read();
-      RTD_data1[i] = in_char;
-      i += 1;
-      if (in_char == 0) {
-        i = 0;
-        break;
+    while (Wire.available()) {            //are there bytes to receive.
+      in_char = Wire.read();              //receive a byte.
+      RTD_data[i] = in_char;              //load this byte into our array.
+      i += 1;                             //incur the counter for the array element.
+      if (in_char == 0) {                 //if we see that we have been sent a null command.
+        i = 0;                            //reset the counter i to 0.
+        break;                            //exit the while loop.
       }
     }
-    Temp1 = atof(RTD_data1);
   }
   serial_event = false;                   //reset the serial event flag.
   return;
 }
 
+
 void rtd2_sensor() {
   Wire.beginTransmission(rtd2);                                                 //call the circuit by its ID number.
-  Wire.write('r');
+  String read = "r";
+  Wire.write(read.c_str());
   Wire.endTransmission();                                                       //end the I2C data transmission.
 
   if (strcmp('r', "sleep") != 0) {                                              //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
@@ -196,31 +203,36 @@ rtds_sensors(){
   return Temp_ = Temp2; //0.5 * (Temp1 + Temp2);
 }
 
+//c0+00.91-03.86e //calibrar pH
+//c0+00.75-03.50e //calibrar pH
+//c2+00.75-03.50e // c: (0=>ph) (1=>od) (2=>temp)
+void sensor_calibrate(){
+  //calibrate function for "message"
+  var = message[1];
+  m   = message.substring(2,8 ).toFloat();
+  n   = message.substring(8,14).toFloat();
 
-void calibrate_sensor() {
-  // comunicacion a sensor 1
-  Wire.beginTransmission(rtd1);
-  Wire.write("cal,25");
-  Wire.endTransmission();                                                       //end the I2C data transmission.
+  switch (var) {
+    case '0': //pH case for calibration
+      m0 = m;
+      n0 = n;
+      break;
 
-  if (strcmp("cal,25", "sleep") != 0) {                                     //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
-    delay(time_);                                                               //wait the correct amount of time for the circuit to complete its instruction.
-    Wire.requestFrom(rtd1, 20, 1);                                              //call the circuit and request 20 bytes (this may be more than we need)
-    code = Wire.read();                                                         //the first byte is the response code, we read this separately.
+    case '1': //Oxigen disolve case for calibration
+      m1 = m;
+      n1 = n;
+      break;
 
-    while (Wire.available()) {            //are there bytes to receive.
-      in_char = Wire.read();              //receive a byte.
-      RTD_data[i] = in_char;              //load this byte into our array.
-      i += 1;                             //incur the counter for the array element.
-      if (in_char == 0) {                 //if we see that we have been sent a null command.
-        i = 0;                            //reset the counter i to 0.
-        break;                            //exit the while loop.
-      }
-    }
+
+    default:
+      break;
   }
-  serial_event = false;                   //reset the serial event flag.
+
+  Serial.println("Sensor calibrated: " + String(m) + " " + String(n));
   return;
 }
+
+
 
 
 void hamilton_pH_sensor(){
@@ -279,6 +291,11 @@ int validate() {
     else if ( message[0]  == 'c' )
           return 1;
 
+    else if ( message[0]  == 't') {
+          temp_calibrar = message.substring(1);
+          return 1;
+    }
+
     //Validete umbral actuador temp: u2t003e
     else if ( message[0] == 'u' && message[1] == '2' &&
               message[2] == 't' && message[6] == 'e'
@@ -315,27 +332,29 @@ void daqmx() {
   Byte0 = Temp_;
   Byte1 = Iph; //Iph vprocess5;
   Byte2 = pH;  //pH vprocess5;
-  //Byte3 = Iph;
-  //Byte4 = 0;//Iod;
-  //Byte5 = 0;//Itemp1;
+
+  Byte3 = m0;
+  Byte4 = n0;//Iod;
+  //Byte5 = temp_calibrar;
   //Byte6 = 0;//Itemp2;
   //Byte7 = 0;//flujo;
 
   dtostrf(Byte0, 7, 2, cByte0);
   dtostrf(Byte1, 7, 2, cByte1);
   dtostrf(Byte2, 7, 2, cByte2);
-  //dtostrf(Byte3, 7, 2, cByte3);
-  //dtostrf(Byte4, 7, 2, cByte4);
+  dtostrf(Byte3, 7, 2, cByte3);
+  dtostrf(Byte4, 7, 2, cByte4);
   //dtostrf(Byte5, 7, 2, cByte5);
   //dtostrf(Byte6, 7, 2, cByte6);
   //dtostrf(Byte7, 7, 2, cByte7);
 
   Serial.print(cByte0);  Serial.print("\t");
   Serial.print(cByte1);  Serial.print("\t");
-  Serial.print(cByte2);  Serial.print("\t");
-  //Serial.print(cByte3);  Serial.print("\t");
-  //Serial.print(cByte4);  Serial.print("\t");
+  Serial.print(cByte2);  Serial.print("\t m0: ");
+  Serial.print(cByte3);  Serial.print("\t n0: ");
+  Serial.print(cByte4);  Serial.print("\t temp_calibrar: ");
   //Serial.print(cByte5);  Serial.print("\t");
+  Serial.print(temp_calibrar);  Serial.print("\t");
   //Serial.print(cByte6);  Serial.print("\t");
   //Serial.print(cByte7);  Serial.print("\t");
 

@@ -83,34 +83,29 @@ def rs232():
 
             while ser.is_open:
                 try:
-                    #se consultan cambios de setpoint's
-                    try:
-                        action = socket_sub.recv(flags=zmq.NOBLOCK).split()[1]
-                        if action != "":
-                            save_setpoint = action
-                            logging.info("****** Se recibe nuevo setpoint desde app.py: %s .... se actualiza save_setpoint: %s ******", action, save_setpoint)
-                    #de no haberlos se continua enviando el ultimo setpoint
-                    except zmq.Again:
-                        action = save_setpoint
-                        logging.info("____________ zmq.Again except ____________")
+                    action = socket_sub.recv(flags=zmq.NOBLOCK).split()[1]
+                    if action != "":
+                        save_setpoint = action
+                        logging.info("****** Se recibe nuevo setpoint desde app.py: %s .... se actualiza save_setpoint: %s ******", action, save_setpoint)
+                        #de no haberlos se continua enviando el ultimo setpoint (por implementar aca abajo)
+                        
+                except zmq.Again:
+                    action = save_setpoint
+                    logging.info("____________ zmq.Again except ____________")
 
-                    #escribiendo y leyendo al uc_sensores:
-                    logging.info("Enviando al uc_sensores: %s  ", action)
-                    ser.write(action + '\n')
-                    #SERIAL_DATA = ser.readline().split()
-                    SERIAL_DATA = ser.readline()
+                #escribiendo y leyendo al uc_sensores:
+                logging.info("Enviando al uc_sensores: %s  ", action)
+                ser.write(action + '\n')
+                #SERIAL_DATA = ser.readline().split()
+                SERIAL_DATA = ser.readline()
 
-                    if SERIAL_DATA != "":
-                        #enviamos la data serial a speaker para su publicacion por zmq en el puerto 5557
-                        socket_pub.send_string("%s %s" % (topic, SERIAL_DATA))
-                        logging.info("********* Se Recojen mediciones del UC_SENSORES: %s *******\n\n", SERIAL_DATA)
+                if SERIAL_DATA != "":
+                    #enviamos la data serial a speaker para su publicacion por zmq en el puerto 5557
+                    socket_pub.send_string("%s %s" % (topic, SERIAL_DATA))
+                    logging.info("********* Se Recojen mediciones del UC_SENSORES: %s *******\n\n", SERIAL_DATA)
 
-                    else:
-                        logging.info("********* Sin respuesta correcta SERIAL_DATA: %s *******\n\n", SERIAL_DATA)
-
-
-                except:
-                    logging.info("no se pudo escribir al uc")
+                else:
+                    logging.info("********* Sin respuesta correcta SERIAL_DATA: %s *******\n\n", SERIAL_DATA)
 
 
                 time.sleep(tau_serial)

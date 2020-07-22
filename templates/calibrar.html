@@ -48,14 +48,14 @@
 
     <div id="med3_c">med3_c</div><br>
     <select id="medx_temp">
-          <option value="med1" selected>Medición 1</option>
-          <option value="med2"         >Medición 2</option>
+          <option hidden value="med1" selected>Medición 1</option>
+          <option hidden value="med2"         >Medición 2</option>
     </select>
     <div>
           <input type="number"
                  id="temp"
                  style="width: 50px;"
-                 value="50"
+                 value="25"
                  MIN="0"
                  MAX="100"
                  step="1"
@@ -63,9 +63,9 @@
           <button  type="submit" class="button_apply"> + </button>
     </div>
     <div id="temp1_set" ></div>
-    <div id="itemp1_set"></div>
-    <div id="temp2_set" ></div>
-    <div id="itemp2_set"></div>
+    <div hidden id="itemp1_set"></div>
+    <div hidden id="temp2_set" ></div>
+    <div hidden id="itemp2_set"></div>
 </div>
 </form><br><br>
 <!calibrar_temp>
@@ -106,7 +106,7 @@
 
 
 <!calibrar_actuacion_ph>
-<form id="calibrar_u" method="POST" action='#'>
+<form hidden id="calibrar_u" method="POST" action='#'>
   <div class="caja4">
         <h4>Umbral Actuadores pH</h4>
         <div> Solución Ácida</div>
@@ -139,7 +139,7 @@
 
 
 <!calibrar_actuacion_temp>
-<form id="calibrar_u_temp" method="POST" action='#'>
+<form hidden id="calibrar_u_temp" method="POST" action='#'>
 <div class="caja3">
     <h4>Umbral Actuador Temperatura</h4>
     <div> RPM Bomba Temperatura</div>

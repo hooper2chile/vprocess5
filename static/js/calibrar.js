@@ -12,9 +12,9 @@ var socket = io.connect(location.protocol + '//' +
 
           //mediciones de ph, OD, Temp.
           socket.on('Medidas', function(msg) {
-              $('#med1_c').text('Itemp: '  + msg.data[3] + ' [mA]' ).html();
-              $('#med2_c').text('Iod: '    + msg.data[4] + ' [mA]' ).html();
-              $('#med3_c').text('Itemp: '  + msg.data[5] + ' [mA]' ).html();
+              $('#med1_c').text('IpH: '          + msg.data[3] + ' [mA]' ).html();
+              $('#med2_c').text('Iod: '          + msg.data[4] + ' [mA]' ).html();
+              $('#med3_c').text('Temperatura: '  + msg.data[5] + ' [ºC]' ).html();
 
               Itemp1 = msg.data[3];
               Iod    = msg.data[4];
@@ -44,10 +44,10 @@ var socket = io.connect(location.protocol + '//' +
 
           //se escuchan desde el servidor los valores seteados para calibración.
           socket.on('ph_calibrar', function(msg) {
-            $('#ph1_set' ).text('Set Temp1 : ' + msg.set[0]).html();
-            $('#iph1_set').text('Set Itemp1: ' + msg.set[1]).html();
-            $('#ph2_set' ).text('Set Temp2 : ' + msg.set[2]).html();
-            $('#iph2_set').text('Set Itemp2: ' + msg.set[3]).html();
+            $('#ph1_set' ).text('Set pH_1 : ' + msg.set[0]).html();
+            $('#iph1_set').text('Set IpH_1: ' + msg.set[1]).html();
+            $('#ph2_set' ).text('Set pH_2 : ' + msg.set[2]).html();
+            $('#iph2_set').text('Set IpH_2: ' + msg.set[3]).html();
           });
 
 

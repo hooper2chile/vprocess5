@@ -37,8 +37,6 @@ command_save = "vacio"
 
 
 
-
-
 def calibrate(var, coef):
     #coef[0| =: pendiente;  coef[1] =: intercepto
     #TRAMA: cXs88.88s99.99e ; m=88.888; n=99.99;
@@ -100,7 +98,7 @@ def calibrate(var, coef):
     #guardo coef_cook en un archivo para depurar
     try:
         f = open(DIR + "/coef_m_n.txt","w")
-        f.write(coef_cook + '\n')
+        f.write(coef_cook + " " + str(type(coef_cook)) + '\n')
         f.close()
         #published_setpoint(coef_cook)
 

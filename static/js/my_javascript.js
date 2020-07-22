@@ -12,7 +12,7 @@ $(document).ready(function() {
 
     //Se escuchan las mediciones de ph, OD, Temp.
     socket.on('Medidas', function(msg) {
-        $('#med1').text('Temp : ' + msg.data[0] + ' º[C]').html();
+        $('#med1').text('Temp : ' + msg.data[0] + ' [ºC]').html();
         $('#med2').text('pH   : ' + msg.data[1] + '     ').html();
         $('#med3').text('oD   : ' + msg.data[2] + '     ').html();
     });
@@ -86,7 +86,7 @@ $(document).ready(function() {
         document.getElementById('alimentar_dir').checked   = msg.set[10];
         document.getElementById('ph_dir').checked          = msg.set[11];
         document.getElementById('temperatura_dir').checked = msg.set[12];
-        document.getElementById('descargar_dir').checked    = msg.set[13];
+        document.getElementById('descargar_dir').checked   = msg.set[13];
 
         //para depurar
         console.log('Checkeds Recibidos');

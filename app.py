@@ -26,6 +26,9 @@ ph_set = [0,0,0,0]
 od_set = [0,0,0,0]
 temp_set = [0,0,0,0]
 
+calibrar_ph   = ""
+calibrar_temp = ""
+
 rm3     =  0
 rm5     =  0
 rm_sets = [0,0,0,0,0,0]  #se agrega rm_sets[5] para enviar este al uc
@@ -318,74 +321,6 @@ def ficha(dato):
 	    logging.info("no se pudo guardar en ficha_producto.txt")
 
 
-
-
-#Sockets de calibración de instrumentación
-#CALIBRACION DE PH
-@socketio.on('ph_calibrar', namespace='/biocl')
-def calibrar_ph(dato):
-    global ph_set
-    #se reciben los parametros para calibración
-    setting = [ dato['ph'], dato['iph'], dato['medx'] ]
-
-    #ORDEN DE: ph_set:
-    #ph_set = [ph1_set, iph1_set, ph2_set, iph2_set]
-    try:
-        if setting[2] == 'med1':
-            ph_set[0] = float(dato['ph'])   #y1
-            ph_set[1] = float(dato['iph'])  #x1
-
-        elif setting[2] == 'med2':
-            ph_set[2] = float(dato['ph'])   #y2
-            ph_set[3] = float(dato['iph'])  #x2
-
-    except:
-        ph_set = [0,0,0,0]
-
-    if (ph_set[3] - ph_set[1])!=0 and ph_set[0]!=0 and ph_set[1]!=0:
-        m_ph = float(format(( ph_set[2] - ph_set[0] )/( ph_set[3] - ph_set[1] ), '.2f'))
-        n_ph = float(format(  ph_set[0] - ph_set[1]*(m_ph), '.2f'))
-
-    else:
-        m_ph = 0
-        n_ph = 0
-
-    if ph_set[0]!=0 and ph_set[1]!=0 and ph_set[2]!=0 and ph_set[3]!=0 and m_ph!=0 and n_ph!=0:
-        try:
-            coef_ph_set = [m_ph, n_ph]
-            f = open(DIR + "/coef_ph_set.txt","w")
-            f.write(str(coef_ph_set) + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
-            f.close()
-            #acá va el codigo que formatea el comando de calibración.
-            calibrar_ph = communication.calibrate(0,coef_ph_set)
-            #Publisher set_data commands al ZMQ suscriptor de myserial.py
-            port = "5556"
-            context = zmq.Context()
-            socket = context.socket(zmq.PUB)
-            socket.bind("tcp://*:%s" % port)
-            #Publisher set_data commands
-            socket.send_string("%s %s" % (topic, calibrar_ph))
-
-        except:
-            pass
-            #logging.info("no se pudo guardar en coef_ph_set.txt. Tampoco actualizar los coef_ph_set al uc.")
-
-    #Con cada cambio en los parametros, se vuelven a emitir a todos los clientes.
-    socketio.emit('ph_calibrar', {'set': ph_set}, namespace='/biocl', broadcast=True)
-
-    #guardo set_data en un archivo para depurar
-    try:
-        ph_set_txt = str(ph_set)
-        f = open(DIR + "/ph_set.txt","w")
-        f.write(ph_set_txt + '\n')
-        f.close()
-
-    except:
-        pass
-        #logging.info("no se pudo guardar parameters en ph_set.txt")
-
-
-
 #CALIBRACION OXIGENO DISUELTO
 @socketio.on('od_calibrar', namespace='/biocl')
 def calibrar_od(dato):
@@ -455,49 +390,78 @@ def calibrar_od(dato):
 
 
 
+#Sockets de calibración de instrumentación
+#CALIBRACION DE PH
+@socketio.on('ph_calibrar', namespace='/biocl')
+def calibrar_ph(dato):
+    global ph_set, calibrar_ph
+    #se reciben los parametros para calibración
+    setting = [ dato['ph'], dato['iph'], dato['medx'] ]
+
+    #ORDEN DE: ph_set:
+    #ph_set = [ph1_set, iph1_set, ph2_set, iph2_set]
+    try:
+        if setting[2] == 'med1':
+            ph_set[0] = float(dato['ph'])   #y1
+            ph_set[1] = float(dato['iph'])  #x1
+
+        elif setting[2] == 'med2':
+            ph_set[2] = float(dato['ph'])   #y2
+            ph_set[3] = float(dato['iph'])  #x2
+
+    except:
+        ph_set = [0,0,0,0]
+
+    if (ph_set[3] - ph_set[1])!=0 and ph_set[0]!=0 and ph_set[1]!=0:
+        m_ph = float(format(( ph_set[2] - ph_set[0] )/( ph_set[3] - ph_set[1] ), '.2f'))
+        n_ph = float(format(  ph_set[0] - ph_set[1]*(m_ph), '.2f'))
+
+    else:
+        m_ph = 0
+        n_ph = 0
+
+    if ph_set[0]!=0 and ph_set[1]!=0 and ph_set[2]!=0 and ph_set[3]!=0 and m_ph!=0 and n_ph!=0:
+        try:
+            coef_ph_set = [m_ph, n_ph]
+            #acá va el codigo que formatea el comando de calibración.
+            calibrar_ph = communication.calibrate(0,coef_ph_set)
+
+            #log a archivo
+            f = open(DIR + "/ph_settings.txt","w")
+            f.write(str(ph_set) + "__" + str(coef_ph_set) + "__" + calibrar_ph + " " + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") +'\n')
+            f.close()
+
+        except:
+            pass
+            #logging.info("no se pudo guardar en coef_ph_set.txt. Tampoco actualizar los coef_ph_set al uc.")
+
+    #Con cada cambio en los parametros, se vuelven a emitir a todos los clientes.
+    socketio.emit('ph_calibrar', {'set': ph_set}, namespace='/biocl', broadcast=True)
+
 
 ########################## se debe actualizar para los sensores atlas scientific #########################
 #CALIBRACIÓN TEMPERATURA
 @socketio.on('temp_calibrar', namespace='/biocl')
 def calibrar_temp(dato):
-    global temp_set
+    global temp_set, calibrar_temp
     #se reciben los parametros para calibración
     setting = [ dato['temp'], dato['itemp'], dato['medx'] ]
 
     try:
-        coef_temp_set = [m_temp, n_temp]
-        #acá va el codigo que formatea el comando de calibración.
-        calibrar_temp = communication.calibrate(2,coef_temp_set)
-        #Publisher set_data commands al ZMQ suscriptor de myserial.py
-        port = "5556"
-        context = zmq.Context()
-        socket = context.socket(zmq.PUB)
-        socket.bind("tcp://*:%s" % port)
-        #Publisher set_data commands
-        socket.send_string("%s %s" % (topic, calibrar_temp))
+        temp_set = str(dato['temp'])
+        calibrar_temp = 't' + temp_set
 
         f = open(DIR + "/coef_temp_set.txt","w")
-        f.write(str(coef_temp_set) + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
+        f.write( temp_set + "  " + calibrar_temp + "  " + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") + '\n')
         f.close()
 
     except:
-        pass
-        #logging.info("no se pudo guardar en coef_ph_set en coef_od_set.txt")
+        logging.info("no se pudo guardar en coef_ph_set en coef_od_set.txt")
 
 
     #Con cada cambio en los parametros, se vuelven a emitir a todos los clientes.
     socketio.emit('temp_calibrar', {'set': temp_set}, namespace='/biocl', broadcast=True)
 
-    #guardo set_data en un archivo para depurar
-    try:
-        temp_set_txt = str(temp_set)
-        f = open(DIR + "/temp_set.txt","w")
-        f.write(temp_set_txt + '\n')
-        f.close()
-
-    except:
-        pass
-        #logging.info("no se pudo guardar parameters en temp_set.txt")
 
 
 
@@ -594,18 +558,40 @@ def background_thread1():
     #####Listen measures
 
     while True:
-        global set_data, rm_sets, rm_save, ficha_producto, rm3, rm5
+        global set_data, rm_sets, rm_save, ficha_producto, rm3, rm5, calibrar_ph, calibrar_temp
 
         #desde aca se envian (publicadores) set_points para myserial.py y dato de ficha producto a database.py
         try:
-            myList = ','.join(map(str, ficha_producto))
             #preparo la ficha_producto y la envio por ZMQ publicador del canal 5557 a la base de datos
+            myList = ','.join(map(str, ficha_producto))
             socket_pub.send_string("%s %s" % (topic, myList))
 
-            #preparo el setpoint y o mando por el ZMQ publicador del canal 5556 a myserial.py
+            #preparo el setpoint y lo mando por el ZMQ publicador del canal 5556 a myserial.py
             send_setpoint = communication.cook_setpoint(set_data,rm_sets)
             socket.send_string("%s %s" % (topic, send_setpoint))
-            save_set_data = set_data
+
+
+            #Caso calibrar pH Sensor Hamilton 4-20 mA
+            if len(calibrar_ph) == 15:
+                #Se envia tres veces por que no toma a la primera en el UC! (RARO!)
+                i = 0
+                while i <= 2:
+                    socketio.sleep(0.1)
+                    socket.send_string("%s %s" % (topic, calibrar_ph))
+                    i += 1
+                calibrar_ph = ""
+
+
+            #Caso calibrar Temperatura Sensor Atlas I2C
+            if len(calibrar_temp) >= 2:
+                #Se envia tres veces por que no toma a la primera en el UC! (RARO!)
+                j = 0
+                while j <= 2:
+                    socketio.sleep(0.1)
+                    socket.send_string("%s %s" % (topic, calibrar_temp))
+                    j += 1
+                calibrar_temp = ""
+
 
 
         except:
@@ -624,13 +610,13 @@ def background_thread1():
             pass
 
         if temp_ != "" and len(temp_) >= 4:
-            measures[0] = temp_[1]  #Temp_
-            measures[1] = temp_[2]  #IpH
-            measures[2] = temp_[3]  #pH
-            #measures[3] = 66#temp_[1]  #
-            #measures[4] = 33#Iod
-            #measures[5] = temp_[1]  #
-            #measures[6] = temp_[1]  #Iph
+            measures[0] = temp_[1] #Temp_
+            measures[1] = temp_[3] #IpH
+            measures[2] = 0        #temp_[3]  #oD en pestana proceso
+            measures[3] = temp_[2] #IpH en pestana calibrar
+            measures[4] = 0        #Iod en pestana calibrar
+            measures[5] = temp_[1] #Itemp en pestana calibrar
+            #measures[6] = 22  #Iph
             measures_save = measures
 
         else:

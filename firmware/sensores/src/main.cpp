@@ -35,9 +35,9 @@ void setup() {
   pinMode(A3, OUTPUT); //Ventilador
 
   //digitalWrite(A0, HIGH);
-  digitalWrite(A1, HIGH);
-  digitalWrite(A2, HIGH);
-  digitalWrite(A3, HIGH);
+  //digitalWrite(A1, HIGH);
+  //digitalWrite(A2, HIGH);
+  //digitalWrite(A3, HIGH);
 
   new_write.reserve(65);
   message.reserve(65);
@@ -66,8 +66,13 @@ void loop() {
                 break;
 
               case 'c':
-                calibrate_sensor();
+                sensor_calibrate();   //command test: c0+00.91-03.86e
                 Serial.println("CALIBRADO!");
+                break;
+
+              case 't':
+                calibrate_sensor_atlas();
+                Serial.println(" ---- Sensor Atlas Scientific Calibrado ---- : " + temp_calibrar );
                 break;
 
               case 'u':
