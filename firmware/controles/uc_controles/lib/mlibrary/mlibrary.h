@@ -48,7 +48,7 @@ uint8_t rst1_save = 1;  uint8_t rst2_save = 1;  uint8_t rst3_save = 1;
 uint8_t dir1 = 1;  uint8_t dir2 = 1;  uint8_t dir3 = 1;
 
 uint8_t pump_enable = 0;
-String relay_temp = "n";
+char relay_temp = 0;
 
 float mytemp_set = 0;
 float mytemp_set_save = 0;
@@ -162,9 +162,9 @@ int validate_write() {
     mymix_setup = message.substring(12,16).toInt();
     rst2 = message.substring(23,24).toInt();
 
-    relay_temp = message.substring(17,18);
+    relay_temp = message[17];
 
-    Serial.println("echo: " + message);
+    Serial.println("echo: " + message + "t: " + relay_temp);
 
     return 1;
   }
