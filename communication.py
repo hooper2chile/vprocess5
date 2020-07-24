@@ -324,7 +324,7 @@ def cook_setpoint(set_data, rm_sets):
 
         #vprocess5
         command = 'wph' + string_ph + 'f' + string_feed + 'u' + string_unload + 'm' + string_mix + 't' + string_temp + 'r' + string_rst + 'd' + string_dir + '\n'
-        logging.info('\n\n' + command + '\n')
+        #logging.info('\n\n' + command + '\n')
         #wph07.0f033u010m0001t053r111111d000111
 
     except:

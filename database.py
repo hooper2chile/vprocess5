@@ -152,7 +152,7 @@ def main():
             f = open(DIR + "/flag_database.txt","r")
             flag_database = f.readlines()[-1]
             f.close()
-            logging.info("FLAG_DATABASE WHILE SUPERIOR:")
+            #logging.info("FLAG_DATABASE WHILE SUPERIOR:")
 
             if flag_database == "True":
                 flag_database_local = True
@@ -160,7 +160,8 @@ def main():
                 flag_database_local = False
 
         except:
-            logging.info("no se pudo leer el flag en el while principal")
+            pass
+            #logging.info("no se pudo leer el flag en el while principal")
 
 
         while flag_database_local:
@@ -207,8 +208,7 @@ def main():
                 f = open(DIR + "/flag_database.txt","r")
                 flag_database = f.readlines()[-1][:-1]
                 f.close()
-
-                logging.info("FLAG_DATABASE WHILE SECUNDARIO:")
+                #logging.info("FLAG_DATABASE WHILE SECUNDARIO:")
 
 
                 if flag_database == "True":

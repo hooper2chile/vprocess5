@@ -289,7 +289,7 @@ def setpoints(dato):
 
     except ValueError:
         set_data = save_set_data #esto permite reenviar el ultimo si hay una exception
-        logging.info("exception de set_data")
+        #logging.info("exception de set_data")
 
     #Con cada cambio en los setpoints, se vuelven a emitir a todos los clientes.
     socketio.emit('Setpoints', {'set': set_data}, namespace='/biocl', broadcast=True)
@@ -301,8 +301,8 @@ def setpoints(dato):
         f.close()
 
     except:
-        #pass
-        logging.info("no se pudo guardar en set_data en setpoints.txt")
+        pass
+        #logging.info("no se pudo guardar en set_data en setpoints.txt")
 
 
 
@@ -320,7 +320,7 @@ def ficha(dato):
 
     except:
         ficha_producto = ficha_producto_save
-        logging.info("no se pudo evaluar la ficha de producto")
+        #logging.info("no se pudo evaluar la ficha de producto")
 
     socketio.emit('producto', {'set':ficha_producto, 'save': ficha_producto_save}, namespace='/biocl', broadcast=True)
     #communication.zmq_client_data_speak_website(ficha_producto)
@@ -611,8 +611,8 @@ def background_thread1():
 
 
         except:
-            #pass
-            logging.info("\n ············· no se pudo enviar datos a los destinatarios ·············\n")
+            pass
+            #logging.info("\n ············· no se pudo enviar datos a los destinatarios ·············\n")
 
 
         #ejecuto suscripcion al ZMQ de myserial.py, esto es las mediciones de variables fisicas (esta linea es un suscriptor al puerto 5557)
@@ -622,8 +622,9 @@ def background_thread1():
             #logging.info("\n Se ejecuto Thread 1 recibiendo %s\n" % measures)
 
         except zmq.Again:
-            logging.info("\n NO SE ACTUALIZARON LAS MEDICIONES NI SETPOINTS \n")
             pass
+            #logging.info("\n NO SE ACTUALIZARON LAS MEDICIONES NI SETPOINTS \n")
+
 
         if temp_ != "" and len(temp_) >= 4:
             measures[0] = temp_[1] #Temp_
