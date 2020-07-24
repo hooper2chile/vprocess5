@@ -22,10 +22,8 @@ const int colorB = 0;
 #define TEMP_MAX  60
 
 //#define REMONTAJE_PIN  A0 //bomba remontaje
-#define AGUA_FRIA      A1 //D10 = rele 1 (cable rojo)
-#define AGUA_CALIENTE  A2 //D11 = rele 2 (cable amarillo)
-#define VENTILADOR     A3 //ventilador
-
+#define AGUA_FRIA      A0
+#define AGUA_CALIENTE  A1
 
                      //wf000u000t000r111d111
                      //wph07.0f014u007m0001t025r111111d000111
@@ -50,7 +48,7 @@ uint8_t rst1_save = 1;  uint8_t rst2_save = 1;  uint8_t rst3_save = 1;
 uint8_t dir1 = 1;  uint8_t dir2 = 1;  uint8_t dir3 = 1;
 
 uint8_t pump_enable = 0;
-uint8_t relay_temp = 1;
+String relay_temp = "n";
 
 float mytemp_set = 0;
 float mytemp_set_save = 0;
@@ -127,6 +125,30 @@ void broadcast_setpoint(uint8_t select) {
 }
 
 
+void reles_temp(){
+  if (relay_temp == 'e') {
+    digitalWrite(AGUA_CALIENTE, HIGH);
+    delay(1);
+    digitalWrite(AGUA_FRIA,      LOW);
+    delay(1);
+  }
+  else if (relay_temp == 'c') {
+    digitalWrite(AGUA_CALIENTE,  LOW);
+    delay(1);
+    digitalWrite(AGUA_FRIA,     HIGH);
+    delay(1);
+  }
+  else {
+    digitalWrite(AGUA_CALIENTE, HIGH);
+    delay(1);
+    digitalWrite(AGUA_FRIA,     HIGH);
+    delay(1);
+  }
+
+  return;
+}
+
+
 void clean_strings() {
   //clean strings
   stringComplete = false;
@@ -140,7 +162,7 @@ int validate_write() {
     mymix_setup = message.substring(12,16).toInt();
     rst2 = message.substring(23,24).toInt();
 
-    relay_temp = message.substring(17,18).toInt();
+    relay_temp = message.substring(17,18);
 
     Serial.println("echo: " + message);
 

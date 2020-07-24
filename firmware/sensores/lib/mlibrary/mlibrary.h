@@ -24,7 +24,6 @@ const int colorB = 0;
 //INA169 + ADS1115: Factores para normalizar mediciones.
 #define PGA1 0.125F
 #define PGA2 0.0625F
-const int VOLTAGE_REF  = 5;    // before: 5  // Reference voltage for analog read
 const int RS = 10;             // Shunt resistor value (in ohms)
 #define mA 1000.0
 #define K 1.0 / (10.0 * RS )
@@ -147,10 +146,10 @@ void calibrate_sensor_atlas() {
   Wire.beginTransmission(rtd2);       //FH, OJO: se esta midiendo con la rtd2!
   //temp_calibrar = "cal," + temp_calibrar;
   //Wire.write(temp_calibrar.c_str());
-  Wire.write("cal,19");
+  Wire.write("cal,20");
   Wire.endTransmission();                                                              //end the I2C data transmission.
 
-  if ( strcmp("cal,19", "sleep" ) != 0) {
+  if ( strcmp("cal,20", "sleep" ) != 0) {
     delay(time_);                                                                     //wait the correct amount of time for the circuit to complete its instruction.
     Wire.requestFrom(rtd2, 20, 1);     //FH, OJO: se esta midiendo con la rtd2!       //call the circuit and request 20 bytes (this may be more than we need)
     code = Wire.read();                                                               //the first byte is the response code, we read this separately.
@@ -333,8 +332,8 @@ void daqmx() {
   Byte1 = Iph; //Iph vprocess5;
   Byte2 = pH;  //pH vprocess5;
 
-  Byte3 = m0;
-  Byte4 = n0;//Iod;
+  //Byte3 = m0;
+  //Byte4 = n0;//Iod;
   //Byte5 = temp_calibrar;
   //Byte6 = 0;//Itemp2;
   //Byte7 = 0;//flujo;
@@ -342,19 +341,19 @@ void daqmx() {
   dtostrf(Byte0, 7, 2, cByte0);
   dtostrf(Byte1, 7, 2, cByte1);
   dtostrf(Byte2, 7, 2, cByte2);
-  dtostrf(Byte3, 7, 2, cByte3);
-  dtostrf(Byte4, 7, 2, cByte4);
+  //dtostrf(Byte3, 7, 2, cByte3);
+  //dtostrf(Byte4, 7, 2, cByte4);
   //dtostrf(Byte5, 7, 2, cByte5);
   //dtostrf(Byte6, 7, 2, cByte6);
   //dtostrf(Byte7, 7, 2, cByte7);
 
   Serial.print(cByte0);  Serial.print("\t");
   Serial.print(cByte1);  Serial.print("\t");
-  Serial.print(cByte2);  Serial.print("\t m0: ");
-  Serial.print(cByte3);  Serial.print("\t n0: ");
-  Serial.print(cByte4);  Serial.print("\t temp_calibrar: ");
+  Serial.print(cByte2);  Serial.print("\t");
+  //Serial.print(cByte3);  Serial.print("\t n0: ");
+  //Serial.print(cByte4);  Serial.print("\t temp_calibrar: ");
   //Serial.print(cByte5);  Serial.print("\t");
-  Serial.print(temp_calibrar);  Serial.print("\t");
+  //Serial.print(temp_calibrar);  Serial.print("\t");
   //Serial.print(cByte6);  Serial.print("\t");
   //Serial.print(cByte7);  Serial.print("\t");
 
@@ -469,9 +468,6 @@ void control_ph() {
   if (rst3 == 0) {
     //for debug //myphset = 7.0; //touch my delta ph
     dpH = myph_set - pH;
-
-    if (myph_set >= 7) dpH = 3;
-    else dpH = -1;
 
     // Escenario en que se debe aplicar acido.
     if ( dpH > 0.0 ) {

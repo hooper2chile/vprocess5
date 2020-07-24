@@ -47,7 +47,7 @@ set_data = [10,  60, 7.0, 10, 25,   1,1,1,1,1,0, 0, 0, 0]
 #rm_sets[5]  =: (reset local de bomba remontaje)
 
 
-ficha_producto = [0.0,0.0,0.0,0.0,0.0,"vacio_uchile","vacio_uchile",0,0.0,0,0,0,0] #ficha_producto[9]=set_data[4]:temparatura setpoint
+ficha_producto = [0.0,0.0,0.0,0.0,0.0,"vacio_uchile-k","vacio_uchile-g",0,0.0,0,0,0,0] #ficha_producto[9]=set_data[4]:temparatura setpoint
 ficha_producto_save = ficha_producto                                  #ficha_producto[10] = set_data[0]: bomba1
                                                                       #ficha_producto[11] = set_data[3]: bomba2
                                                                       #ficha_producto[12] = rm_sets[4]*rm_sets[5] : para saber cuando
@@ -187,7 +187,9 @@ def setpoints(dato):
 
         elif task[0] == "reiniciar":
             os.system(DIR + "bash killall")
-            os.system("rm -rf" + DIR + "/database/*.db-journal")
+            os.system("rm -rf " + DIR + "/database/*.db-journal")
+            os.system("rm -rf " + DIR + "/*.txt")
+
             os.system("sudo reboot")
 
         elif task[0] == "apagar":
@@ -196,15 +198,29 @@ def setpoints(dato):
 
         elif task[0] == "limpiar":
             try:
-                os.system("rm -rf" + DIR + "/csv/*.csv")
-                os.system("rm -rf" + DIR + "/log/*.log")
-                os.system("rm -rf" + DIR + "/log/my.log.*")
-                os.system("rm -rf" + DIR + "/database/*.db")
-                os.system("rm -rf" + DIR + "/database/*.db-journal")
+                os.system("rm -rf " + DIR + "/csv/*.csv")
+                os.system("rm -rf " + DIR + "/log/*.log")
+                os.system("rm -rf " + DIR + "/log/my.log.*")
+                os.system("rm -rf " + DIR + "/database/*.db")
+                os.system("rm -rf " + DIR + "/database/*.db-journal")
+
+                f = open(DIR + "/limpiar.txt","w")
+                f.write("entro en el elif == limpiar\n")
+                f.close()
 
             except:
+                f = open(DIR + "/limpiar.txt","w")
+                f.write("entro en la except de limpiar\n")
+                f.close()
                 pass
                 #logging.info("no se pudo completar limpiar\n")
+
+        else:
+            f = open(DIR + "/limpiar.txt","w")
+            f.write("se metio en el else de task[0]\n")
+            f.close()
+
+
 
 
 N = None
@@ -245,7 +261,7 @@ def my_json(dato):
 
 @socketio.on('Setpoints', namespace='/biocl')
 def setpoints(dato):
-    global set_data
+    global set_data, save_set_data
     #se reciben los nuevos setpoints
     set_data = [ dato['alimentar'], dato['mezclar'], dato['ph'], dato['descarga'], dato['temperatura'], dato['alimentar_rst'], dato['mezclar_rst'], dato['ph_rst'], dato['descarga_rst'], dato['temperatura_rst'], dato['alimentar_dir'], dato['ph_dir'], dato['temperatura_dir'], dato['descarga_dir']  ]
 
@@ -300,8 +316,7 @@ def ficha(dato):
         ficha_producto[2] = float(dato['biomasa'])
         ficha_producto[3] = float(dato['sustrato'])
 
-
-        ficha_producto_save = ficha_producto
+        #ficha_producto_save = ficha_producto  #esta sobre escribiendo
 
     except:
         ficha_producto = ficha_producto_save
@@ -310,15 +325,6 @@ def ficha(dato):
     socketio.emit('producto', {'set':ficha_producto, 'save': ficha_producto_save}, namespace='/biocl', broadcast=True)
     #communication.zmq_client_data_speak_website(ficha_producto)
 
-    try:
-        f = open(DIR + "/ficha_producto.txt","a+")
-     	f.write(str(ficha_producto) + '...' + time.strftime("__Hora__%H_%M_%S__Fecha__%d-%m-%y") +'\n')
-    	f.close()
-        logging.info("se guardo en ficha_producto.txt")
-
-    except:
-        #pass
-	    logging.info("no se pudo guardar en ficha_producto.txt")
 
 
 #CALIBRACION OXIGENO DISUELTO
@@ -531,10 +537,11 @@ def calibrar_u_temp(dato):
 def background_thread1():
     measures = [0,0,0,0,0,0,0]
     measures_save = measures
+    global save_set_data, set_data
     save_set_data = [20,0,0,20,0,1,1,1,1,1,0,0,0]
 
     topic   = 'w'
-    #####Publisher part: publicador las lecturas obtenidas al zmq suscriptor de ficha_producto en la base de datos.
+    #####Publisher part: publicador zmq para el suscriptor de ficha_producto en la base de datos.
     port_pub = "5554"
     context_pub = zmq.Context()
     socket_pub = context_pub.socket(zmq.PUB)
@@ -558,13 +565,22 @@ def background_thread1():
     #####Listen measures
 
     while True:
-        global set_data, rm_sets, rm_save, ficha_producto, rm3, rm5, calibrar_ph, calibrar_temp
+        global save_set_data, set_data, rm_sets, rm_save, ficha_producto, rm3, rm5, calibrar_ph, calibrar_temp
 
         #desde aca se envian (publicadores) set_points para myserial.py y dato de ficha producto a database.py
         try:
+            #las actualizaciones de abajo deben ir aqui para que aplique la sentencia "!=" en el envio de datos para ficha_producto hacia la Base de Datos
+            ficha_producto[9]  = set_data[4]*(1 - set_data[9])  #setpoint de temperatura
+            ficha_producto[10] = set_data[0]*(1 - set_data[5])  #bomba1
+            ficha_producto[11] = set_data[3]*(1 - set_data[8])  #bomba2
+            ficha_producto[4]  = set_data[1]*(1 - set_data[6])  #mezclador
+            ficha_producto[8]  = set_data[2]*(1 - set_data[7])  #setpoint pH
+            #ficha_producto_save = ficha_producto #se respalda todo lo de ficha_producto
             #preparo la ficha_producto y la envio por ZMQ publicador del canal 5557 a la base de datos
             myList = ','.join(map(str, ficha_producto))
             socket_pub.send_string("%s %s" % (topic, myList))
+
+
 
             #preparo el setpoint y lo mando por el ZMQ publicador del canal 5556 a myserial.py
             send_setpoint = communication.cook_setpoint(set_data,rm_sets)
@@ -621,15 +637,6 @@ def background_thread1():
 
         else:
             measures = measures_save
-
-        #las actualizaciones de abajo deben ir aqui para que aplique la sentencia "!=" en el envio de datos para ficha_producto hacia la Base de Datos
-        ficha_producto[9]  = save_set_data[4]*(1 - save_set_data[9])  #setpoint de temperatura
-        ficha_producto[10] = save_set_data[0]*(1 - save_set_data[5])  #bomba1
-        ficha_producto[11] = save_set_data[3]*(1 - save_set_data[8])  #bomba2
-        ficha_producto[4]  = save_set_data[1]*(1 - save_set_data[6])  #mezclador
-        ficha_producto[8]  = save_set_data[2]*(1 - save_set_data[7])  #setpoint pH
-
-
 
         #se termina de actualizar y se emiten las mediciones y setpoints para hacia clientes web.-
         socketio.emit('Medidas', {'data': measures, 'set': set_data}, namespace='/biocl')
