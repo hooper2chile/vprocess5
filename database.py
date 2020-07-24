@@ -38,7 +38,7 @@ def update_db(real_data, ficha_producto, connector, c, first_time, BACKUP):
         c.execute("INSERT INTO PROCESO  VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (datetime.datetime.now().strftime("%Y-%m-%d"), datetime.datetime.now().strftime("%H:%M:%S"), ficha_producto[0], ficha_producto[1], ficha_producto[2], ficha_producto[3], ficha_producto[4], ficha_producto[10], ficha_producto[11], ficha_producto[9], real_data[1], ficha_producto[8], real_data[3] ))
 
         #Insercion solo de los datos de sensores
-        c.execute("INSERT INTO PH          VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[4]),2)))
+        c.execute("INSERT INTO PH          VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[3]),2)))
         c.execute("INSERT INTO OD          VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[2]),2)))
         c.execute("INSERT INTO TEMPERATURA VALUES (NULL,?,?)", (datetime.datetime.now().strftime("%Y-%m-%d,%H:%M:%S"), round(float(real_data[1]),2)))
 
