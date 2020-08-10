@@ -70,7 +70,7 @@ void loop() {
                 Serial.println("CALIBRADO!");
                 break;
 
-              case 't':
+              case 'z':
                 calibrate_sensor_atlas();
                 Serial.println(" ---- Sensor Atlas Scientific Calibrado ---- : " + temp_calibrar );
                 break;

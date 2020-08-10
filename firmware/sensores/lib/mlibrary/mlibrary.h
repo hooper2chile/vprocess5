@@ -146,10 +146,10 @@ void calibrate_sensor_atlas() {
   Wire.beginTransmission(rtd2);       //FH, OJO: se esta midiendo con la rtd2!
   //temp_calibrar = "cal," + temp_calibrar;
   //Wire.write(temp_calibrar.c_str());
-  Wire.write("cal,20");
+  Wire.write("cal,26");
   Wire.endTransmission();                                                              //end the I2C data transmission.
 
-  if ( strcmp("cal,20", "sleep" ) != 0) {
+  if ( strcmp("cal,26", "sleep" ) != 0) {
     delay(time_);                                                                     //wait the correct amount of time for the circuit to complete its instruction.
     Wire.requestFrom(rtd2, 20, 1);     //FH, OJO: se esta midiendo con la rtd2!       //call the circuit and request 20 bytes (this may be more than we need)
     code = Wire.read();                                                               //the first byte is the response code, we read this separately.
